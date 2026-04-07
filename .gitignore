@@ -85,3 +85,12 @@ $RECYCLE.BIN/
 
 # Docker
 docker-compose.override.yml
+
+# Angular / Node.js
+node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+*.tsbuildinfo

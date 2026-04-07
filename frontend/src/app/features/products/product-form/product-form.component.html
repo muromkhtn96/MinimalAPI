@@ -1,0 +1,110 @@
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <h2>{{ isEditMode ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới' }}</h2>
+
+      <!-- Loading -->
+      <div *ngIf="loading" class="text-center my-4">
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">Đang tải...</span>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <form *ngIf="!loading" [formGroup]="productForm" (ngSubmit)="onSubmit()" class="mt-4">
+        <!-- Name -->
+        <div class="mb-3">
+          <label for="name" class="form-label">Tên sản phẩm <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            id="name"
+            class="form-control"
+            formControlName="name"
+            [class.is-invalid]="f['name'].invalid && f['name'].touched">
+          <div class="invalid-feedback" *ngIf="f['name'].invalid && f['name'].touched">
+            <div *ngIf="f['name'].errors?.['required']">Tên sản phẩm là bắt buộc</div>
+            <div *ngIf="f['name'].errors?.['maxlength']">Tên sản phẩm tối đa 200 ký tự</div>
+          </div>
+        </div>
+
+        <!-- Price -->
+        <div class="row">
+          <div class="col-md-8 mb-3">
+            <label for="price" class="form-label">Giá <span class="text-danger">*</span></label>
+            <input
+              type="number"
+              id="price"
+              class="form-control"
+              formControlName="price"
+              [class.is-invalid]="f['price'].invalid && f['price'].touched">
+            <div class="invalid-feedback" *ngIf="f['price'].invalid && f['price'].touched">
+              <div *ngIf="f['price'].errors?.['required']">Giá là bắt buộc</div>
+              <div *ngIf="f['price'].errors?.['min']">Giá phải lớn hơn 0</div>
+            </div>
+          </div>
+
+          <div class="col-md-4 mb-3">
+            <label for="currency" class="form-label">Đơn vị <span class="text-danger">*</span></label>
+            <select id="currency" class="form-select" formControlName="currency">
+              <option *ngFor="let curr of currencies" [value]="curr">{{ curr }}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Category -->
+        <div class="mb-3">
+          <label for="categoryId" class="form-label">Danh mục <span class="text-danger">*</span></label>
+          <select
+            id="categoryId"
+            class="form-select"
+            formControlName="categoryId"
+            [class.is-invalid]="f['categoryId'].invalid && f['categoryId'].touched">
+            <option value="">-- Chọn danh mục --</option>
+            <option *ngFor="let category of categories" [value]="category.id">{{ category.name }}</option>
+          </select>
+          <div class="invalid-feedback" *ngIf="f['categoryId'].invalid && f['categoryId'].touched">
+            Danh mục là bắt buộc
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-3">
+          <label for="description" class="form-label">Mô tả</label>
+          <textarea
+            id="description"
+            class="form-control"
+            rows="3"
+            formControlName="description"></textarea>
+        </div>
+
+        <!-- IsActive (only in edit mode) -->
+        <div class="mb-3" *ngIf="isEditMode">
+          <div class="form-check">
+            <input
+              type="checkbox"
+              id="isActive"
+              class="form-check-input"
+              formControlName="isActive">
+            <label class="form-check-label" for="isActive">
+              Hoạt động
+            </label>
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="d-flex gap-2">
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="submitting || productForm.invalid">
+            <span *ngIf="submitting" class="spinner-border spinner-border-sm me-1"></span>
+            {{ isEditMode ? 'Cập nhật' : 'Tạo mới' }}
+          </button>
+          <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="submitting">
+            Hủy
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

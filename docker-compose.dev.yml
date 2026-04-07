@@ -78,6 +78,17 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: Web
+    ports:
+      - "4200:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   pgdata:
   seqdata:

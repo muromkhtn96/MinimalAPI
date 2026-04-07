@@ -139,6 +139,12 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
+
+    // Seed data — chỉ Development
+    if (app.Environment.IsDevelopment())
+    {
+        await SeedData.SeedAsync(db);
+    }
 }
 
 app.Run();

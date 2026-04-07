@@ -29,7 +29,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=minimalapi_prod;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}"
-      AllowedOrigins: ${ALLOWED_ORIGINS:-https://yourdomain.com}
+      AllowedOrigins: ${ALLOWED_ORIGINS:-http://localhost}
     ports:
       - "5000:8080"
     volumes:
@@ -43,6 +43,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: MinimalAPI.Angular
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
     restart: unless-stopped
 
 volumes:
