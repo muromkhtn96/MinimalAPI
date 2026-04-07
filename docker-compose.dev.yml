@@ -1,7 +1,8 @@
+name: MinimalAPI
 services:
   db:
     image: postgres:17
-    container_name: MinimalAPI.PostgresDB
+    container_name: PostgresDB
     environment:
       POSTGRES_DB: minimalapi_dev
       POSTGRES_USER: postgres
@@ -11,26 +12,33 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d minimalapi_dev"]
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
 
   seq:
     image: datalust/seq:latest
-    container_name: MinimalAPI.Seq
+    container_name: SeqLog
     environment:
       ACCEPT_EULA: "Y"
       SEQ_FIRSTRUN_NOAUTHENTICATION: "true"
     ports:
-      - "5341:5341"   # Ingestion API
-      - "8081:80"     # Seq UI
+      - "5341:5341"
+      - "8081:80"
     volumes:
       - seqdata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "--silent", "http://localhost:80"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: MinimalAPI.PgAdmin
+    container_name: PgAdmin
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin123
@@ -43,12 +51,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
 
   api:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: MinimalAPI.Host
+    container_name: Api
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=minimalapi_dev;Username=postgres;Password=postgres123"
@@ -65,6 +74,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      seq:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   pgdata:
