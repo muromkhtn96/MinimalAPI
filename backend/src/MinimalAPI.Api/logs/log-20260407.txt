@@ -1,0 +1,16 @@
+2026-04-07 14:56:12.974 +07:00 [WRN] You do not have a valid license key for the Lucky Penny software MediatR. This is allowed for development and testing scenarios. If you are running in production you are required to have a licensed version. Please visit https://luckypennysoftware.com to obtain a valid license.
+2026-04-07 14:57:09.402 +07:00 [WRN] You do not have a valid license key for the Lucky Penny software MediatR. This is allowed for development and testing scenarios. If you are running in production you are required to have a licensed version. Please visit https://luckypennysoftware.com to obtain a valid license.
+2026-04-07 14:57:10.192 +07:00 [ERR] Failed executing DbCommand (19ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "MigrationId", "ProductVersion"
+FROM "__EFMigrationsHistory"
+ORDER BY "MigrationId";
+2026-04-07 14:57:55.968 +07:00 [WRN] You do not have a valid license key for the Lucky Penny software MediatR. This is allowed for development and testing scenarios. If you are running in production you are required to have a licensed version. Please visit https://luckypennysoftware.com to obtain a valid license.
+2026-04-07 14:59:00.837 +07:00 [WRN] You do not have a valid license key for the Lucky Penny software MediatR. This is allowed for development and testing scenarios. If you are running in production you are required to have a licensed version. Please visit https://luckypennysoftware.com to obtain a valid license.
+2026-04-07 14:59:02.287 +07:00 [INF] Now listening on: http://localhost:5000
+2026-04-07 14:59:02.288 +07:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-04-07 14:59:02.288 +07:00 [INF] Hosting environment: Development
+2026-04-07 14:59:02.288 +07:00 [INF] Content root path: D:\Projects\MinimalAPI\backend\src\MinimalAPI.Api
+2026-04-07 14:59:25.793 +07:00 [INF] Handling GetCategoriesQuery
+2026-04-07 14:59:26.028 +07:00 [INF] Handled GetCategoriesQuery in 233ms
+2026-04-07 14:59:26.089 +07:00 [INF] Handling GetProductsQuery
+2026-04-07 14:59:26.097 +07:00 [INF] Handled GetProductsQuery in 8ms

@@ -1,0 +1,50 @@
+# Production docker-compose — API + PostgreSQL
+# Usage: docker compose up --build -d
+# Override connection string + secrets via .env file hoặc env vars
+
+services:
+  db:
+    image: postgres:17
+    container_name: MinimalAPI.PostgresDB
+    environment:
+      POSTGRES_DB: minimalapi_prod
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: MinimalAPI.Host
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=minimalapi_prod;Username=${DB_USER:-postgres};Password=${DB_PASSWORD}"
+      AllowedOrigins: ${ALLOWED_ORIGINS:-https://yourdomain.com}
+    ports:
+      - "5000:8080"
+    volumes:
+      - api-logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  api-logs:

@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MinimalAPI.Api/MinimalAPI.Api.csproj" />
+    <Project Path="src/MinimalAPI.Application/MinimalAPI.Application.csproj" />
+    <Project Path="src/MinimalAPI.Domain/MinimalAPI.Domain.csproj" />
+    <Project Path="src/MinimalAPI.Infrastructure/MinimalAPI.Infrastructure.csproj" />
+  </Folder>
+</Solution>
