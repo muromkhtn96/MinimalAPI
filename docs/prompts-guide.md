@@ -1,682 +1,307 @@
-# Prompt Guide — MinimalAPI (.NET 10 + Angular)
+# MinimalAPI — Prompt Guide (.NET 10 + Angular)
 
-> **Cách dùng**: Copy từng prompt, gửi cho Claude Code CLI theo thứ tự.
-> Mỗi prompt hoàn thành rồi mới chuyển sang prompt tiếp theo.
->
-> **Project**: MinimalAPI — Quản lý sản phẩm (Product Management)
-> **Stack**: .NET 10 Minimal API (VSA + DDD) · Angular · PostgreSQL · Serilog · Swagger
-> **Environments**: Development + Production
+**Mục tiêu**: Xây dựng hệ thống Product Management theo VSA + DDD 4 layers
+**Stack**: .NET 10 Minimal API · PostgreSQL · EF Core · MediatR · Angular · Docker
+**Cách dùng**: Copy từng prompt theo thứ tự, mỗi prompt hoàn thành rồi mới sang prompt tiếp
 
 ---
 
-## PHASE 0: CÀI ĐẶT MÔI TRƯỜNG
-
-### Prompt 0.1 — Cài đặt môi trường
+## PHASE 0: MÔI TRƯỜNG
 
 ```
-Cài đặt môi trường phát triển cho project MinimalAPI trên Windows:
+Cài đặt môi trường tại D:\Projects\MinimalAPI:
 
-1. Angular CLI: gỡ bản cũ (v13), cài latest stable:
-   npm uninstall -g @angular/cli && npm install -g @angular/cli@latest
-   Verify: ng version
+1. Angular CLI: npm uninstall -g @angular/cli && npm install -g @angular/cli@latest
 
-2. PostgreSQL + Seq qua Docker — tạo file docker-compose.dev.yml tại D:\Projects\MinimalAPI:
-   - PostgreSQL 17, port 5432
-   - container_name: MinimalAPI.PostgresDB
-   - POSTGRES_DB: minimalapi_dev
-   - POSTGRES_USER: postgres
-   - POSTGRES_PASSWORD: postgres123
-   - Volume: pgdata
-   - Healthcheck: pg_isready
-   - Seq (datalust/seq:latest): port 5341 (ingestion), port 8081 (UI)
-   - container_name: MinimalAPI.Seq
-   - Volume: seqdata
+2. Tạo docker-compose.dev.yml:
+   - PostgreSQL 17: port 5432, POSTGRES_DB=minimalapi_dev, POSTGRES_USER=postgres, POSTGRES_PASSWORD=postgres123, volume pgdata, healthcheck pg_isready
+   - Seq: datalust/seq:latest, ports 5341+8081, env ACCEPT_EULA=Y + SEQ_FIRSTRUN_NOAUTHENTICATION=true, volume seqdata
 
-3. Chạy: docker compose -f docker-compose.dev.yml up -d
-4. Verify kết nối: docker exec vào container, psql -U postgres -d minimalapi_dev -c "SELECT 1"
-5. Verify Seq UI: http://localhost:8081
-
-KHÔNG cài Redis, KHÔNG cài Kafka.
+3. docker compose -f docker-compose.dev.yml up -d
+4. Verify: docker exec MinimalAPI.PostgresDB psql -U postgres -d minimalapi_dev -c "SELECT 1"
 ```
 
 ---
 
-## PHASE 1: KHỞI TẠO PROJECT
-
-### Prompt 1.1 — Solution Backend (DDD 4 layers)
+## PHASE 1: KHỞI TẠO
 
 ```
-Tạo Solution .NET 10 theo DDD tại D:\Projects\MinimalAPI\backend, tên solution MinimalAPI:
+Tạo backend + frontend tại D:\Projects\MinimalAPI:
 
-backend/
-├── src/
-│   ├── MinimalAPI.Domain/           # Pure C#, không dependency
-│   ├── MinimalAPI.Application/      # Phụ thuộc Domain
-│   ├── MinimalAPI.Infrastructure/   # Phụ thuộc Domain
-│   └── MinimalAPI.Api/              # Phụ thuộc Application + Infrastructure
-└── MinimalAPI.sln
+1. Backend Solution (.NET 10, DDD 4 layers):
+   - dotnet new sln -n MinimalAPI -o backend
+   - Tạo classlib: Domain, Application, Infrastructure
+   - Tạo web: Api
+   - Add vào sln, setup references: Api→(App,Infra), App→Domain, Infra→Domain
+   - Xóa Class1.cs, verify: dotnet build
 
-Bước thực hiện:
-1. dotnet new sln -n MinimalAPI -o backend
-2. Tạo projects:
-   - Domain, Application, Infrastructure: dotnet new classlib
-   - Api: dotnet new web
-3. Add projects vào solution
-4. Project references (dependency rule):
-   - Application → Domain
-   - Infrastructure → Domain
-   - Api → Application + Infrastructure
-   - Domain → KHÔNG reference gì
-5. Xóa file mặc định (Class1.cs...)
-6. Verify: dotnet build backend/MinimalAPI.sln
+2. Frontend (Angular):
+   - ng new minimal-app --directory frontend --routing --style=scss --ssr=false
+   - Verify: ng serve
+
+3. CLAUDE.md (tại root):
+```markdown
+# MinimalAPI — .NET 10, Minimal API, PostgreSQL, EF Core, MediatR, FluentValidation, Serilog
+
+## Architecture: 4-layer DDD (Domain -> Application -> Infrastructure -> Api)
+- Domain: Entities, VOs, Typed IDs, Events, Repo interfaces. No external deps.
+- Application: CQRS/MediatR. Vertical slices: `Features/{Entity}/{UseCase}/`
+- Infrastructure: EF Core, Repos, UoW
+- Api: Endpoints, middleware, DI
+
+## Naming
+- `{Action}{Entity}Command/Query/Handler/Validator.cs`, `{Entity}Endpoints.cs`
+- DB: tables lowercase plural, columns snake_case
+
+## Rules
+- Result<T> for commands, NO exceptions for business logic
+- Factory methods + private setters on entities, sealed record VOs with Create()
+- Typed IDs: `readonly record struct {Entity}Id(Guid Value)`
+- Repos only for Aggregate Roots, Queries use IApplicationDbContext
+- Handlers: primary constructors, no business logic — delegate to domain
+- Endpoints: TypedResults, ISender, route group + WithTags()
+- EF: ComplexProperty for VOs, HasConversion for Typed IDs
+- Vietnamese user messages, English code
 ```
-
-### Prompt 1.2 — Angular Frontend
-
-```
-Tạo Angular project tại D:\Projects\MinimalAPI\frontend:
-
-1. Chạy: ng new minimal-app --directory frontend --routing --style=scss --ssr=false
-2. Verify chạy được: ng serve (thử rồi tắt)
-3. Confirm port mặc định 4200 trong angular.json
-
-Chưa cần thêm thư viện nào.
-```
-
-### Prompt 1.3 — Claude CLI (tối ưu token)
-
-```
-Tạo cấu hình Claude Code CLI tại D:\Projects\MinimalAPI.
-Mục tiêu: hỗ trợ + quản trị + code cho project dài hạn. Tối ưu token — giữ mọi thứ ngắn gọn.
-
-1. Tạo CLAUDE.md tại root (file này load MỌI session — phải ngắn):
-
----
-# MinimalAPI
-
-## Stack
-BE: .NET 10 Minimal API, VSA, DDD, PostgreSQL, Serilog, Swagger
-FE: Angular, SCSS, Bootstrap
-
-## Architecture
-```
-Api → Application → Domain ← Infrastructure
-```
-- Domain: pure C#, không dependency
-- Application: MediatR + FluentValidation, features theo VSA
-- Infrastructure: EF Core + Npgsql
-- Api: Minimal API endpoints, Serilog, Swagger
-
-## Conventions
-- Primary constructor cho DI
-- Result<T> pattern (không throw cho business logic)
-- TypedResults cho endpoints
-- Strongly Typed IDs (readonly record struct)
-- Value Objects: sealed record + private ctor + static Create()
-- DB: snake_case (bảng + cột)
-- CQRS: Command = EF Core (tracked), Query = EF Core LINQ (AsNoTracking)
-
-## Structure
-- backend/src/MinimalAPI.{Domain,Application,Infrastructure,Api}/
-- frontend/ (Angular)
-- docker-compose.dev.yml (PostgreSQL dev)
-- docker-compose.yml (full stack production)
-
-## Environments
-- Development: Swagger UI, detailed logs, seed data, CORS localhost:4200
-- Production: no Swagger, minimal logs, no seed, CORS production domain
----
-
-2. Tạo .claude/ — CHỈ những gì thực sự cần, không tạo thừa:
-
-.claude/agents/implementer.md:
-```
-# Implementer
-Thực thi code changes theo convention trong CLAUDE.md.
-- Đọc CLAUDE.md trước khi code
-- Giữ changes nhỏ, traceable
-- Follow VSA: mỗi feature 1 folder
-- Verify build pass sau khi thay đổi
-```
-
-.claude/agents/reviewer.md:
-```
-# Reviewer
-Review code về correctness, convention, security.
-- Check dependency rule (Domain không phụ thuộc gì)
-- Check convention trong CLAUDE.md
-- Trả findings theo severity: critical > warning > info
-```
-
-.claude/commands/implement.md:
-```
-Implement task theo CLAUDE.md conventions. Tóm tắt files changed và remaining gaps.
-```
-
-.claude/commands/review.md:
-```
-Review current changes. Check architecture rules, conventions, security. Required fixes trước, suggestions sau.
-```
-
-.claude/commands/diagnose.md:
-```
-Điều tra issue, xác định root cause, đề xuất fix.
-```
-
-KHÔNG tạo thêm agents/skills/commands khác. Giữ tối thiểu để tiết kiệm token.
-3. Tạo .claude/settings.json nếu cần thiết lập permission mặc định.
 ```
 
 ---
 
-## PHASE 2: BACKEND — DOMAIN LAYER
-
-### Prompt 2.1 — Domain Primitives
+## PHASE 2: DOMAIN
 
 ```
-Tạo base classes trong MinimalAPI.Domain/Primitives/:
+Tạo Domain layer trong MinimalAPI.Domain/:
 
-1. IDomainEvent.cs — interface: DateTime OccurredAt
-2. Entity<TId>.cs — abstract class, TId : notnull
-   - TId Id { get; protected init; }
-   - Override Equals/GetHashCode (so sánh bằng Id)
-   - Protected parameterless ctor (EF Core)
-3. AggregateRoot<TId>.cs — kế thừa Entity<TId>
-   - Private List<IDomainEvent>, public IReadOnlyList
-   - Protected RaiseDomainEvent(), public ClearDomainEvents()
-4. Domain/Exceptions/DomainException.cs — kế thừa Exception
+1. Primitives/:
+   - IDomainEvent: interface với DateTime OccurredAt
+   - IHasDomainEvents: interface với IReadOnlyList<IDomainEvent> DomainEvents + void ClearDomainEvents() (dùng để scan generic từ ChangeTracker)
+   - Entity<TId>: abstract, TId Id {protected init}, Equals/GetHashCode theo Id, protected ctor()
+   - AggregateRoot<TId>: kế thừa Entity, implement IHasDomainEvents, List<IDomainEvent> + RaiseDomainEvent() + ClearDomainEvents()
+   - Exceptions/DomainException.cs
 
-Comment tiếng Việt ngắn gọn cho intern.
-```
+2. Entities/ (Typed IDs):
+   - ProductId: readonly record struct(Guid Value), static New()
+   - CategoryId: readonly record struct(Guid Value), static New()
 
-### Prompt 2.2 — Strongly Typed IDs + Value Objects
+3. ValueObjects/:
+   - Money: sealed record(decimal Amount, string Currency), private ctor, static Create() + VND() + Zero, validate >=0 + 3chars, operators +/*
+   - ProductName: sealed record(string Value), private ctor, static Create(), validate NotEmpty/Max200/Trim
 
-```
-Tạo trong MinimalAPI.Domain:
+4. Entities/ (Aggregates):
+   - Category: AggregateRoot<CategoryId>, props Name/Description?/CreatedAt, private setters + ctor, static Create(), method Update()
+   - Product: AggregateRoot<ProductId>, props Name(ProductName)/Price(Money)/CategoryId/Description?/IsActive/CreatedAt/UpdatedAt?, private setters + ctor, static Create(), methods UpdateInfo()/UpdatePrice()/Activate()/Deactivate(), raise ProductCreatedEvent + ProductPriceChangedEvent
 
-Entities/ (Strongly Typed IDs):
-1. ProductId — readonly record struct(Guid Value), static New()
-2. CategoryId — readonly record struct(Guid Value), static New()
+5. Events/:
+   - ProductCreatedEvent(ProductId, DateTime OccurredAt)
+   - ProductPriceChangedEvent(ProductId, Money OldPrice, Money NewPrice, DateTime OccurredAt)
 
-ValueObjects/:
-1. Money.cs — sealed record, Amount + Currency
-   - Private ctor + static Create(decimal, string)
-   - Validate: amount >= 0, currency 3 chars
-   - Static: VND(decimal), Zero
-   - Operators: + (cùng currency), * (quantity)
-
-2. ProductName.cs — sealed record, Value (string)
-   - Private ctor + static Create(string)
-   - Validate: not empty, max 200, trim
-
-Comment giải thích Value Object vs Entity cho intern.
-```
-
-### Prompt 2.3 — Entities & Domain Events
-
-```
-Tạo Entities trong MinimalAPI.Domain/Entities/:
-
-1. Category.cs — AggregateRoot<CategoryId>:
-   - Name (string), Description (string?), CreatedAt (DateTime)
-   - Private setters, private parameterless ctor
-   - Static Create(string name, string? description)
-   - Method: Update(string name, string? description)
-
-2. Product.cs — AggregateRoot<ProductId>:
-   - Name (ProductName), Price (Money), CategoryId, Description (string?),
-     IsActive (bool), CreatedAt, UpdatedAt (DateTime?)
-   - Private setters, private parameterless ctor
-   - Static Create(ProductName, Money, CategoryId, string?)
-   - Methods: UpdateInfo(), UpdatePrice(), Deactivate(), Activate()
-   - Raise ProductCreatedEvent khi tạo, ProductPriceChangedEvent khi đổi giá
-
-Domain/Events/:
-- ProductCreatedEvent(ProductId) : IDomainEvent
-- ProductPriceChangedEvent(ProductId, Money OldPrice, Money NewPrice) : IDomainEvent
-
-KHÔNG public setter. Mọi thay đổi qua method.
-```
-
-### Prompt 2.4 — Repository Interfaces
-
-```
-Tạo interfaces trong MinimalAPI.Domain/Interfaces/:
-
-1. IProductRepository — GetByIdAsync(ProductId), Add(Product), Remove(Product)
-2. ICategoryRepository — GetByIdAsync(CategoryId), ExistsByNameAsync(string), Add(Category)
-3. IUnitOfWork — SaveChangesAsync(CancellationToken)
-
-Repository chỉ cho Aggregate Root.
+6. Interfaces/:
+   - IProductRepository: GetByIdAsync(ProductId), Add(Product), Remove(Product)
+   - ICategoryRepository: GetByIdAsync(CategoryId), ExistsByNameAsync(string), Add(Category), GetAllAsync()
+   - IUnitOfWork: SaveChangesAsync(CancellationToken)
 ```
 
 ---
 
-## PHASE 3: BACKEND — INFRASTRUCTURE
-
-### Prompt 3.1 — NuGet Packages
+## PHASE 3: INFRASTRUCTURE
 
 ```
-Cài NuGet packages cho MinimalAPI backend:
+Setup Infrastructure layer:
 
-MinimalAPI.Infrastructure:
-- Microsoft.EntityFrameworkCore, Npgsql.EntityFrameworkCore.PostgreSQL
-- Microsoft.EntityFrameworkCore.Design
+1. NuGet packages:
+   - Infrastructure: Microsoft.EntityFrameworkCore + Npgsql.EntityFrameworkCore.PostgreSQL + Design
+   - Application: MediatR + FluentValidation + FluentValidation.DependencyInjection
+   - Api: Serilog.AspNetCore + Sinks (Console, File, Seq) + Enrichers (Environment, Process) + Swashbuckle.AspNetCore + EFCore.Design
+   - Domain: KHÔNG cài gì
 
-MinimalAPI.Application:
-- MediatR, FluentValidation, FluentValidation.DependencyInjection
+2. Infrastructure/Persistence/:
+   - IApplicationDbContext: interface với IQueryable<Product> Products, IQueryable<Category> Categories (cho query side AsNoTracking)
+   - DomainEventNotification: sealed record(IDomainEvent DomainEvent) : INotification (wrapper bridge Domain→MediatR)
+   - AppDbContext: primary ctor(DbContextOptions, IMediator), DbSet<Product> + DbSet<Category>, implement IApplicationDbContext (return AsNoTracking), SaveChangesAsync (commit → scan IHasDomainEvents → collect events → clear → wrap DomainEventNotification → publish), OnModelCreating ApplyConfigurationsFromAssembly
+   - Configurations/ProductConfiguration: table "products", HasConversion ProductId/CategoryId→Guid, ComplexProperty ProductName→"name"(max200), ComplexProperty Money→"price_amount"(decimal18,2)+"price_currency"(varchar3), Ignore DomainEvents
+   - Configurations/CategoryConfiguration: table "categories", HasConversion CategoryId→Guid, Name required max100 unique index, Ignore DomainEvents
 
-MinimalAPI.Api:
-- Serilog.AspNetCore, Serilog.Sinks.Console, Serilog.Sinks.File, Serilog.Sinks.Seq
-- Serilog.Enrichers.Environment, Serilog.Enrichers.Process
-- Swashbuckle.AspNetCore
-- Microsoft.EntityFrameworkCore.Design
+3. Repositories/:
+   - ProductRepository: primary ctor(AppDbContext), implement IProductRepository
+   - CategoryRepository: implement ICategoryRepository
+   - UnitOfWork: implement IUnitOfWork, delegate AppDbContext.SaveChanges
 
-MinimalAPI.Domain: KHÔNG cài gì.
+4. DependencyInjection.cs:
+   - AddInfrastructure(IServiceCollection, IConfiguration): DbContext (UseNpgsql "DefaultConnection" + EnableRetryOnFailure maxRetryCount=3 maxRetryDelay=5s), scoped IApplicationDbContext→AppDbContext, scoped IProductRepository/ICategoryRepository/IUnitOfWork
 
-Dùng dotnet add package. Chạy dotnet restore && dotnet build verify.
-```
+5. Api/appsettings:
+   - appsettings.json: Serilog MinimumLevel Info
+   - appsettings.Development.json: ConnectionStrings:DefaultConnection="Host=localhost;Port=5432;Database=minimalapi_dev;Username=postgres;Password=postgres123", Serilog WriteTo Console+File(logs/log-.txt daily) Override Microsoft.AspNetCore=Warning, EnableSwagger=true
+   - appsettings.Production.json: ConnectionStrings:DefaultConnection="Host=db;Port=5432;Database=minimalapi_prod;Username=postgres;Password=postgres123", Serilog WriteTo File MinimumLevel Warning, EnableSwagger=false
+   - launchSettings.json: profile "dev" ASPNETCORE_ENVIRONMENT=Development port 5000
 
-### Prompt 3.2 — DbContext & EF Core Configurations
-
-```
-Tạo EF Core trong MinimalAPI.Infrastructure/Persistence/:
-
-1. AppDbContext.cs:
-   - Primary constructor(DbContextOptions, IMediator)
-   - DbSet<Product>, DbSet<Category>
-   - Override SaveChangesAsync: commit → collect domain events → clear → dispatch via MediatR
-   - OnModelCreating: ApplyConfigurationsFromAssembly
-
-2. Configurations/ProductConfiguration.cs:
-   - Table "products", snake_case columns
-   - HasConversion: ProductId ↔ Guid, CategoryId ↔ Guid
-   - ComplexProperty: ProductName → column "name" (max 200)
-   - ComplexProperty: Money → columns "price_amount" decimal(18,2), "price_currency" varchar(3)
-   - HasConversion<string> cho enum nếu có
-   - Ignore DomainEvents
-
-3. Configurations/CategoryConfiguration.cs:
-   - Table "categories", snake_case
-   - HasConversion: CategoryId ↔ Guid
-   - Name: required, max 100, unique index
-   - Ignore DomainEvents
-```
-
-### Prompt 3.3 — Repositories & DI Registration
-
-```
-Tạo trong MinimalAPI.Infrastructure/:
-
-Persistence/Repositories/:
-1. ProductRepository.cs — implement IProductRepository, primary constructor(AppDbContext)
-2. CategoryRepository.cs — implement ICategoryRepository
-3. UnitOfWork.cs — implement IUnitOfWork, delegate to AppDbContext
-
-DependencyInjection.cs:
-- Static method AddInfrastructure(this IServiceCollection, IConfiguration)
-- Đăng ký: AppDbContext (UseNpgsql, connection string "DefaultConnection")
-- Đăng ký: IProductRepository, ICategoryRepository, IUnitOfWork
-- Đăng ký: IApplicationDbContext → AppDbContext (cho query side)
-```
-
-### Prompt 3.4 — Environments & Migration
-
-```
-Cấu hình 2 môi trường cho MinimalAPI.Api và tạo migration đầu tiên:
-
-1. appsettings.json (shared config):
-   - Serilog base config: MinimumLevel Information
-   - Không chứa connection string
-
-2. appsettings.Development.json:
-   - ConnectionStrings:DefaultConnection = "Host=localhost;Port=5432;Database=minimalapi_dev;Username=postgres;Password=postgres123"
-   - Serilog: WriteTo Console + File (logs/log-.txt, rolling daily)
-   - Serilog MinimumLevel.Override: Microsoft.AspNetCore = Warning
-   - EnableSwagger: true
-
-3. appsettings.Production.json:
-   - ConnectionStrings:DefaultConnection = "Host=db;Port=5432;Database=minimalapi_prod;Username=postgres;Password=OVERRIDE_VIA_ENV"
-   - Serilog: WriteTo File only (logs/log-.txt), MinimumLevel Warning
-   - EnableSwagger: false
-
-4. Properties/launchSettings.json:
-   - Profile "dev": ASPNETCORE_ENVIRONMENT = Development, port 5000
-   - Profile "prod": ASPNETCORE_ENVIRONMENT = Production, port 8080
-
-5. Tạo migration:
+6. Migration:
    - dotnet ef migrations add InitialCreate --project src/MinimalAPI.Infrastructure --startup-project src/MinimalAPI.Api
    - dotnet ef database update --startup-project src/MinimalAPI.Api
-   - Verify bảng trong PostgreSQL: docker exec psql -c "\dt"
+   - Verify: docker exec MinimalAPI.PostgresDB psql -U postgres -d minimalapi_dev -c "\dt"
 ```
 
 ---
 
-## PHASE 4: BACKEND — APPLICATION LAYER
-
-### Prompt 4.1 — Pipeline Behaviors + Result Pattern
+## PHASE 4: APPLICATION
 
 ```
-Tạo trong MinimalAPI.Application/:
+Tạo Application layer theo VSA:
 
-Behaviors/:
-1. ValidationBehavior.cs — IPipelineBehavior, inject IEnumerable<IValidator<TRequest>>
-   Nếu có validator và lỗi → throw ValidationException. Primary constructor.
-2. LoggingBehavior.cs — IPipelineBehavior, log request name + elapsed time (Stopwatch)
+1. Abstractions/:
+   - Result<T>: record(T? Value, string? Error, bool IsSuccess), static Success(T)/Failure(string)
+   - PagedResult<T>: record(List<T> Items, int TotalCount, int Page, int PageSize, int TotalPages, bool HasNext, bool HasPrevious)
 
-Abstractions/:
-1. Result.cs — record Result<T>: Value, Error, IsSuccess. Static: Success(T), Failure(string)
-2. PagedResult.cs — record PagedResult<T>: Items, TotalCount, Page, PageSize, TotalPages, HasNext, HasPrevious
+2. Behaviors/:
+   - ValidationBehavior: IPipelineBehavior, primary ctor(IEnumerable<IValidator<TRequest>>), validate → throw ValidationException nếu lỗi
+   - LoggingBehavior: IPipelineBehavior, log request name + Stopwatch elapsed
 
-DependencyInjection.cs:
-- AddApplication(this IServiceCollection)
-- Đăng ký MediatR + behaviors (Validation trước, Logging sau) + validators from assembly
-```
+3. DependencyInjection.cs:
+   - AddApplication(IServiceCollection): MediatR from assembly, AddOpenBehavior ValidationBehavior + LoggingBehavior, AddValidatorsFromAssembly
 
-### Prompt 4.2 — Feature: Product CRUD (VSA)
+4. Features/Products/:
+   - DTOs/ProductDto: record(Guid Id, string Name, decimal Price, string Currency, Guid CategoryId, string CategoryName, string? Description, bool IsActive, DateTime CreatedAt)
+   - CreateProduct/: Command(Name, Price, Currency, CategoryId, Description?) : IRequest<Result<Guid>>, Validator (Name NotEmpty Max200, Price>0, Currency NotEmpty Len3, CategoryId NotEmpty, messages Vietnamese), Handler (primary ctor inject ICategoryRepository/IProductRepository/IUnitOfWork, check category exists → ProductName.Create + Money.Create → Product.Create → repo.Add → uow.Save → Success(id))
+   - GetProduct/: Query(Guid Id) : IRequest<ProductDto?>, Handler (primary ctor inject IApplicationDbContext, LINQ Join Products+Categories AsNoTracking → Select new ProductDto)
+   - GetProducts/: Query(int Page=1, int PageSize=10, string? Search=null) : IRequest<PagedResult<ProductDto>>, Handler (LINQ Join + Where search Name.Value.Contains + CountAsync + OrderByDescending CreatedAt + Skip/Take AsNoTracking → Select new ProductDto)
+   - UpdateProduct/: Command(Guid Id, Name, Price, Currency, Description?) : IRequest<Result>, Validator, Handler (repo.GetByIdAsync → UpdateInfo + UpdatePrice → uow.Save)
+   - DeleteProduct/: Command(Guid Id) : IRequest<Result>, Handler (repo.GetByIdAsync → repo.Remove → uow.Save)
 
-```
-Tạo CRUD features cho Product trong MinimalAPI.Application/Features/Products/:
-
-DTOs/ProductResponse.cs:
-- record(Guid Id, string Name, decimal Price, string Currency, Guid CategoryId, string CategoryName, string? Description, bool IsActive, DateTime CreatedAt)
-
-CreateProduct/ (Command side — EF Core):
-- CreateProductCommand.cs: record(string Name, decimal Price, string Currency, Guid CategoryId, string? Description) : IRequest<Result<Guid>>
-- CreateProductValidator.cs: Name NotEmpty MaxLength(200), Price > 0, Currency NotEmpty Length(3), CategoryId NotEmpty. Lỗi tiếng Việt.
-- CreateProductHandler.cs: check category exists → tạo Product.Create() → repo.Add → unitOfWork.Save → return Success(id)
-
-GetProduct/ (Query side — EF Core LINQ):
-- GetProductQuery.cs: record(Guid Id) : IRequest<ProductResponse?>
-- GetProductHandler.cs: inject IApplicationDbContext, LINQ Join Products + Categories → ProjectDto
-
-GetProducts/ (Query side — EF Core LINQ):
-- GetProductsQuery.cs: record(int Page = 1, int PageSize = 10, string? Search = null) : IRequest<PagedResult<ProductResponse>>
-- GetProductsHandler.cs: LINQ Join + search filter + CountAsync + Skip/Take
-
-UpdateProduct/:
-- UpdateProductCommand, Validator, Handler: lấy product → UpdateInfo + UpdatePrice → save
-
-DeleteProduct/:
-- DeleteProductCommand, Handler: lấy product → repo.Remove → save
-
-Mỗi feature 1 folder chứa tất cả files liên quan.
-```
-
-### Prompt 4.3 — Feature: Category CRUD (VSA)
-
-```
-Tạo CRUD features cho Category trong MinimalAPI.Application/Features/Categories/:
-
-DTOs/CategoryResponse.cs:
-- record(Guid Id, string Name, string? Description, DateTime CreatedAt)
-
-CreateCategory/:
-- Command + Validator (Name NotEmpty, MaxLength 100, kiểm tra trùng tên) + Handler
-
-GetCategories/:
-- Query(int Page = 1, int PageSize = 20) + Handler (EF Core LINQ)
-
-UpdateCategory/:
-- Command + Validator + Handler
-
-DeleteCategory/:
-- Command + Handler (check không có product nào thuộc category trước khi xóa)
-
-Giữ đơn giản hơn Product.
+5. Features/Categories/:
+   - DTOs/CategoryDto: record(Guid Id, string Name, string? Description, DateTime CreatedAt)
+   - CreateCategory/: Command(Name, Description?) : IRequest<Result<Guid>>, Validator (Name NotEmpty Max100, check ExistsByNameAsync), Handler (Category.Create → repo.Add → uow.Save)
+   - GetCategories/: Query(int Page=1, int PageSize=20) : IRequest<PagedResult<CategoryDto>>, Handler (LINQ AsNoTracking)
+   - GetCategory/: Query(Guid Id) : IRequest<CategoryDto?>, Handler (LINQ AsNoTracking FirstOrDefault)
+   - UpdateCategory/: Command(Guid Id, Name, Description?) : IRequest<Result>, Validator, Handler (repo.GetByIdAsync → Update → uow.Save)
+   - DeleteCategory/: Command(Guid Id) : IRequest<Result>, Handler (check products.Count via IApplicationDbContext → repo.GetByIdAsync → repo.Remove → uow.Save)
 ```
 
 ---
 
-## PHASE 5: BACKEND — API LAYER
-
-### Prompt 5.1 — Program.cs (Dev + Prod)
+## PHASE 5: API
 
 ```
-Cấu hình MinimalAPI.Api/Program.cs với 2 môi trường:
+Tạo API layer:
 
-1. Serilog: UseSerilog() đọc config từ appsettings (đã tạo ở 3.4)
+1. Api/Program.cs:
+   - UseSerilog(readFrom appsettings)
+   - Services: AddApplication() + AddInfrastructure(config) + AddHealthChecks().AddDbContextCheck<AppDbContext>() + AddRateLimiter(FixedWindow 100req/1min per IP) + AddProblemDetails + AddEndpointsApiExplorer + AddSwaggerGen("MinimalAPI", "v1") + AddCors("frontend")
+   - Pipeline: UseExceptionHandler (ValidationException→400 ProblemDetails, DomainException→400, else→500, include traceId) → UseHttpsRedirection if !Development → UseCors → UseRateLimiter → UseSwagger/UseSwaggerUI if Development → MapProductEndpoints + MapCategoryEndpoints + MapHealthChecks("/health")
+   - CORS: Development AllowOrigins "http://localhost:4200", Production AllowOrigins from config "AllowedOrigins", both AllowAnyHeader/Method
+   - Auto migrate + Seed: using scope → db.Database.MigrateAsync() → if Development SeedData.SeedAsync(db)
+   - app.Run()
 
-2. Services:
-   - AddApplication() + AddInfrastructure(config)
-   - AddProblemDetails
-   - AddEndpointsApiExplorer + AddSwaggerGen (title "MinimalAPI", version "v1")
-   - AddCors: policy "frontend"
+2. Api/Endpoints/ProductEndpoints.cs:
+   - MapProductEndpoints(this WebApplication): var group = app.MapGroup("/api/products").WithTags("Products")
+   - GET / (int page=1, int pageSize=10, string? search) → inject ISender → Send GetProductsQuery → TypedResults.Ok(pagedResult)
+   - GET /{id:guid} → GetProductQuery → result ? Ok(result) : NotFound()
+   - POST / (CreateProductCommand cmd) → Send → result.IsSuccess ? Created($"/api/products/{id}", id) : BadRequest(result.Error), WithName/Summary/Produces
+   - PUT /{id:guid} (body) → UpdateProductCommand → NoContent/BadRequest/NotFound
+   - DELETE /{id:guid} → DeleteProductCommand → NoContent/NotFound
 
-3. Middleware pipeline:
-   - UseExceptionHandler: ValidationException → 400, DomainException → 400, _ → 500 (ProblemDetails format)
-   - UseCors("frontend")
-   - if Development: UseSwagger + UseSwaggerUI
-   - Map endpoints
+3. Api/Endpoints/CategoryEndpoints.cs:
+   - MapCategoryEndpoints(this WebApplication): var group = app.MapGroup("/api/categories").WithTags("Categories")
+   - CRUD endpoints tương tự Products
 
-4. CORS policy:
-   - Development: AllowOrigins "http://localhost:4200", AllowAnyHeader, AllowAnyMethod
-   - Production: AllowOrigins từ config "AllowedOrigins"
+4. Infrastructure/Persistence/SeedData.cs:
+   - static async SeedAsync(AppDbContext): if context.Categories.Any() return → 3 categories via Category.Create() → AddRange + SaveChanges → 5 products via Product.Create(ProductName.Create, Money.VND, categoryId) → AddRange + SaveChanges
 
-5. Seed data (Development only):
-   - if app.Environment.IsDevelopment() → scope → SeedData.SeedAsync(db)
-
-6. Verify: dotnet run → Swagger UI tại /swagger
-```
-
-### Prompt 5.2 — Endpoints + Seed Data
-
-```
-Tạo Minimal API endpoints và seed data:
-
-MinimalAPI.Api/Endpoints/:
-1. ProductEndpoints.cs:
-   - MapProductEndpoints(this WebApplication)
-   - Group: /api/products, tag "Products"
-   - GET /, GET /{id:guid}, POST /, PUT /{id:guid}, DELETE /{id:guid}
-   - Inject ISender (MediatR), dùng TypedResults
-   - Result handling: Success → Ok/Created, Failure → NotFound/BadRequest
-   - WithName, WithSummary, Produces<> cho Swagger
-
-2. CategoryEndpoints.cs:
-   - Group: /api/categories, tag "Categories"
-   - CRUD endpoints tương tự
-
-3. Đăng ký trong Program.cs: app.MapProductEndpoints(), app.MapCategoryEndpoints()
-
-MinimalAPI.Infrastructure/Persistence/SeedData.cs:
-- SeedAsync(AppDbContext db): nếu chưa có data → tạo 3 categories + 5 products
-- Dùng factory method Create() của entity
-
-Chạy project, test tất cả endpoints qua Swagger. Kiểm tra Serilog logs trong console + file.
-Nếu có lỗi thì fix cho đến khi mọi thứ hoạt động.
+5. Test: dotnet run --project backend/src/MinimalAPI.Api, Swagger http://localhost:5000/swagger, test CRUD, verify logs console + file logs/, verify /health endpoint 200 OK
 ```
 
 ---
 
-## PHASE 6: FRONTEND — ANGULAR
-
-### Prompt 6.1 — Cấu trúc, Models, Services
+## PHASE 6: FRONTEND
 
 ```
-Setup Angular project tại D:\Projects\MinimalAPI\frontend:
+Setup Angular frontend:
 
-1. Cài Bootstrap: npm install bootstrap
-   Import vào styles.scss: @import "bootstrap/scss/bootstrap";
+1. Bootstrap: npm install bootstrap, import vào styles.scss: @import "bootstrap/scss/bootstrap";
 
-2. Cấu trúc:
-   src/app/
-   ├── core/
-   │   ├── services/ (product.service.ts, category.service.ts)
-   │   ├── models/ (product.model.ts, category.model.ts, paged-result.model.ts)
-   │   └── interceptors/ (error.interceptor.ts)
-   ├── features/
-   │   ├── products/ (list + form components)
-   │   ├── categories/ (list + form components)
-   │   └── home/ (home component)
-   └── shared/components/
+2. Cấu trúc src/app/:
+   - core/models/: Product, Category, PagedResult<T> interfaces
+   - core/services/: ProductService (getAll/getById/create/update/delete), CategoryService (getAll/create/update/delete), HttpClient Observable
+   - core/interceptors/: ErrorInterceptor (catch 400/404/500)
+   - features/home/: HomeComponent ("MinimalAPI — Hệ thống quản lý sản phẩm")
+   - features/products/: ProductListComponent (table Name/Price/Category/IsActive, pagination, search, buttons Add/Edit/Delete confirm), ProductFormComponent (ReactiveForm shared Create/Edit detect by route id, Name required max200, Price required >0, Currency dropdown VND/USD, Category dropdown, Description, validation inline, submit navigate /products)
+   - features/categories/: CategoryListComponent + CategoryFormComponent (simple Name/Description)
+   - shared/components/: navbar (Home, Products, Categories)
 
-3. Models (TypeScript interfaces):
-   - Product: id, name, price, currency, categoryId, categoryName, description?, isActive, createdAt
-   - Category: id, name, description?, createdAt
-   - PagedResult<T>: items, totalCount, page, pageSize, totalPages
+3. Environment: environment.ts apiUrl='http://localhost:5000/api'
 
-4. Environment: src/environments/environment.ts → apiUrl = 'http://localhost:5000/api'
+4. app.config.ts: provideHttpClient()
 
-5. Services (HttpClient, return Observable):
-   - ProductService: getAll(page, pageSize, search?), getById(id), create(data), update(id, data), delete(id)
-   - CategoryService: getAll(), create(data), update(id, data), delete(id)
+5. Routing: / → Home, /products → list, /products/create → form, /products/edit/:id → form, /categories → list, /categories/create → form, /categories/edit/:id → form, ** → 404
 
-6. provideHttpClient() trong app.config.ts
-```
+6. Loading state + disable submit during request
 
-### Prompt 6.2 — Product & Category Pages
-
-```
-Tạo các trang UI trong Angular:
-
-1. ProductListComponent (features/products/product-list/):
-   - Bảng: tên, giá, category, trạng thái (Active/Inactive)
-   - Phân trang Previous/Next
-   - Ô tìm kiếm theo tên
-   - Nút: Thêm, Sửa, Xóa (confirm trước khi xóa)
-   - Bootstrap table
-
-2. ProductFormComponent (features/products/product-form/):
-   - Dùng chung Create + Edit (detect qua route param id)
-   - Reactive Form: Name (required, max 200), Price (required, > 0), Currency (dropdown VND/USD), Category (dropdown), Description
-   - Validation errors inline
-   - Submit → navigate về /products
-
-3. CategoryListComponent + CategoryFormComponent:
-   - Đơn giản: chỉ Name + Description
-   - CRUD tương tự Product
-
-4. HomeComponent: trang chào "MinimalAPI — Hệ thống quản lý sản phẩm"
-
-5. Navbar: links Home, Products, Categories
-
-6. Routing:
-   / → Home
-   /products → list, /products/create → form, /products/edit/:id → form
-   /categories → list, /categories/create → form, /categories/edit/:id → form
-   ** → 404
-
-7. Error interceptor: catch 400 (show validation errors), 404, 500
-8. Loading state + disable submit khi đang gửi
-
-Giao diện clean, đơn giản. Ưu tiên hoạt động đúng.
+7. Test: ng serve, http://localhost:4200, test CRUD both Products/Categories
 ```
 
 ---
 
-## PHASE 7: TÍCH HỢP & HOÀN THIỆN
-
-### Prompt 7.1 — Kết nối BE + FE
+## PHASE 7: DOCKER & HOÀN THIỆN
 
 ```
-Kết nối Backend và Frontend:
-
-1. Verify CORS: BE cho phép http://localhost:4200
-2. Verify API URL: FE environment.ts trỏ đúng port BE
-3. Chạy đồng thời:
-   - Terminal 1: dotnet run --project backend/src/MinimalAPI.Api
-   - Terminal 2: cd frontend && ng serve
-4. Test qua UI tại http://localhost:4200:
-   - CRUD categories
-   - CRUD products (chọn category từ dropdown)
-   - Phân trang, tìm kiếm
-5. Fix lỗi nếu có (CORS, serialization, routing...)
-```
-
-### Prompt 7.2 — Docker Compose (Dev + Prod)
-
-```
-Tạo Docker setup cho MinimalAPI:
+Dockerize và hoàn thiện project:
 
 1. backend/Dockerfile (multi-stage):
-   - Stage build: mcr.microsoft.com/dotnet/sdk:10.0-preview, restore → publish
-   - Stage runtime: mcr.microsoft.com/dotnet/aspnet:10.0-preview, expose 8080, non-root user
-   - Comment giải thích từng stage
+   - build: mcr.microsoft.com/dotnet/sdk:10.0-preview, COPY *.csproj restore, COPY . publish -c Release -o /app
+   - runtime: mcr.microsoft.com/dotnet/aspnet:10.0-preview, WORKDIR /app, COPY --from=build, USER app, EXPOSE 8080, ENTRYPOINT dotnet MinimalAPI.Api.dll
 
 2. frontend/Dockerfile (multi-stage):
-   - Stage build: node, npm install → ng build --configuration production
-   - Stage runtime: nginx, serve static + proxy /api → api:8080
-   - frontend/nginx.conf: proxy_pass cho /api
+   - build: node:20, WORKDIR /app, COPY package*.json npm install, COPY . ng build --configuration production
+   - runtime: nginx:alpine, COPY --from=build /app/dist/minimal-app /usr/share/nginx/html, COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-3. docker-compose.dev.yml (đã có từ Phase 0, PostgreSQL + Seq + API):
-   - PostgreSQL: container_name MinimalAPI.PostgresDB
-   - Seq: container_name MinimalAPI.Seq, port 5341 (ingestion) + 8081 (UI)
-   - API: build từ backend/Dockerfile, port 5000:8080, depends_on db healthy
-   - Override Seq URL qua env: Serilog__WriteTo__2__Args__serverUrl=http://seq:5341
+3. frontend/nginx.conf:
+   - server listen 80, root /usr/share/nginx/html, index index.html
+   - location / try_files $uri $uri/ /index.html
+   - location /api/ proxy_pass http://api:8080/api/
 
-4. docker-compose.yml (Production — full stack):
-   services:
-     db: postgres:17, volume pgdata, healthcheck
-       container_name: MinimalAPI.PostgresDB
-       POSTGRES_DB: minimalapi_prod
-     api: build ./backend
-       container_name: MinimalAPI.Host
-       ASPNETCORE_ENVIRONMENT: Production
-       depends_on db healthy
-       ports: 5000:8080
-     web: build ./frontend
-       container_name: MinimalAPI.Angular
-       depends_on api
-       ports: 80:80
+4. docker-compose.yml (Production full stack):
+   - db: postgres:17, MinimalAPI.PostgresDB, POSTGRES_DB=minimalapi_prod, volume pgdata, healthcheck pg_isready
+   - api: build ./backend, MinimalAPI.Host, ASPNETCORE_ENVIRONMENT=Production, ConnectionStrings__DefaultConnection override, depends_on db healthy, ports 5000:8080
+   - web: build ./frontend, MinimalAPI.Angular, depends_on api, ports 80:80
 
-5. .dockerignore cho cả backend và frontend
+5. Cập nhật docker-compose.dev.yml:
+   - Thêm api: build ./backend, depends_on db+seq, ASPNETCORE_ENVIRONMENT=Development, ConnectionStrings__DefaultConnection, Serilog__WriteTo__2__Args__serverUrl=http://seq:5341, ports 5000:8080
 
-6. Test: docker compose up --build
-   - http://localhost → FE
-   - http://localhost:5000/swagger → KHÔNG hiện (Production)
-```
+6. .dockerignore: backend (bin/obj/.vs/logs/), frontend (node_modules/dist/.angular/)
 
-### Prompt 7.3 — Hoàn thiện & Documentation
+7. .gitignore: bin/, obj/, node_modules/, dist/, logs/, .vs/, .idea/, *.user, docker-compose.override.yml
 
-```
-Hoàn thiện project MinimalAPI:
+8. README.md:
+   - MinimalAPI — Product Management System
+   - Tech: .NET 10, Angular 19, PostgreSQL, Docker
+   - Structure: backend (Domain/Application/Infrastructure/Api), frontend, docs
+   - Development: docker compose -f docker-compose.dev.yml up -d, dotnet run --project backend/src/MinimalAPI.Api, cd frontend && ng serve
+   - Production: docker compose up --build
+   - Swagger: http://localhost:5000/swagger (Development only)
 
-1. Kiểm tra conventions:
-   - Domain: pure C#, không NuGet
-   - snake_case DB columns
-   - Primary constructor, TypedResults, VSA folders
-   - Development vs Production config đúng
-
-2. .gitignore: bin/, obj/, node_modules/, dist/, logs/, .vs/, .idea/, *.user, docker override
-
-3. README.md tại root:
-   - Mô tả project + tech stack
-   - Cấu trúc thư mục (tree ngắn gọn)
-   - Hướng dẫn chạy:
-     a. Prerequisites (Docker, .NET 10, Node.js)
-     b. Development: docker compose -f docker-compose.dev.yml up -d (DB) → dotnet run → ng serve
-     c. Production: docker compose up --build
-   - API docs: Swagger tại /swagger (chỉ Development)
-   - Hướng dẫn intern: đọc code từ Domain → Infrastructure → Application → Api
-
-4. Verify:
-   - dotnet build — không warning
-   - ng build — không error
-   - docker compose up --build — cả 3 services chạy OK
+9. Test full flow:
+   - docker compose up --build → http://localhost → test UI CRUD → verify db data → docker compose down
+   - Verify: dotnet build (no warning), ng build (no error)
 ```
 
 ---
 
 ## TÓM TẮT
 
-```
-Phase 0  (1 prompt)   Môi trường: Angular CLI + PostgreSQL Docker
-Phase 1  (3 prompts)  Khởi tạo: BE solution + FE Angular + Claude CLI
-Phase 2  (4 prompts)  Domain: Primitives → IDs + VOs → Entities → Repo interfaces
-Phase 3  (4 prompts)  Infrastructure: NuGet → DbContext → Repos → Environments + Migration
-Phase 4  (3 prompts)  Application: Behaviors + Result → Product CRUD → Category CRUD
-Phase 5  (2 prompts)  API: Program.cs → Endpoints + Seed
-Phase 6  (2 prompts)  Frontend: Setup + Services → Pages + Routing
-Phase 7  (3 prompts)  Tích hợp: Connect → Docker → Documentation
+**7 Phases → 7 Prompts tối ưu**
 
-TỔNG: 22 prompts
-```
+| Phase | Nội dung | Kết quả |
+|-------|----------|---------|
+| 0 | Môi trường | Docker PostgreSQL + Seq |
+| 1 | Khởi tạo | BE solution + FE Angular + CLAUDE.md |
+| 2 | Domain | Primitives + Entities + VOs + Repos |
+| 3 | Infrastructure | EF Core + DbContext + Migration |
+| 4 | Application | MediatR + Behaviors + CRUD Features |
+| 5 | API | Program.cs + Endpoints + Seed |
+| 6 | Frontend | Angular Services + UI Components |
+| 7 | Docker | Dockerfile + docker-compose + README |
 
-## LƯU Ý
-
-- Mỗi prompt xong → verify build pass trước khi tiếp
-- Domain viết trước — foundation của mọi thứ
-- Không Redis, không Kafka
-- 2 môi trường: Development (Swagger, logs, seed) vs Production (no Swagger, minimal logs)
-- Claude CLI tối giản: chỉ CLAUDE.md + 2 agents + 3 commands → tiết kiệm token mỗi session
+**Conventions chính:**
+- 4-layer DDD: Domain (pure) → Application (VSA) → Infrastructure (EF) → Api (Minimal)
+- Typed IDs (readonly record struct), VOs (sealed record), Result<T> pattern
+- Command (tracked) vs Query (AsNoTracking), primary constructors, TypedResults
+- DB snake_case, Vietnamese user messages, English code
