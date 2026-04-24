@@ -58,6 +58,10 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.UpdatedAt)
             .HasColumnName("updated_at");
 
+        builder.HasOne(p => p.Category)
+            .WithMany()
+            .HasForeignKey(p => p.CategoryId);
+
         // Ignore DomainEvents — không persist vào DB
         builder.Ignore(p => p.DomainEvents);
     }

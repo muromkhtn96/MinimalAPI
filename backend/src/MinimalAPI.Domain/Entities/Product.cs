@@ -13,6 +13,7 @@ public sealed class Product : AggregateRoot<ProductId>
     public ProductName Name { get; private set; } = default!;
     public Money Price { get; private set; } = default!;
     public CategoryId CategoryId { get; private set; }
+    public Category Category { get; private set; } = default!;
     public string? Description { get; private set; }
     public bool IsActive { get; private set; }
     public DateTime CreatedAt { get; private set; }
