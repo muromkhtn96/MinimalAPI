@@ -8,15 +8,11 @@ public interface ICategoryRepository
     /// <summary>Lấy danh mục theo Id (null nếu không tìm thấy).</summary>
     Task<Category?> GetByIdAsync(CategoryId id, CancellationToken ct = default);
 
-    /// <summary>Kiểm tra tên danh mục đã tồn tại chưa.</summary>
+    Task<int> CountAsync(CancellationToken ct = default);
+    Task<List<Category>> GetPagedAsync(int page, int pageSize, CancellationToken ct = default);
+
     Task<bool> ExistsByNameAsync(string name, CancellationToken ct = default);
-
-    /// <summary>Kiểm tra tên danh mục đã tồn tại chưa (trừ danh mục đang sửa).</summary>
     Task<bool> ExistsByNameAsync(string name, CategoryId excludeId, CancellationToken ct = default);
-
-    /// <summary>Thêm danh mục mới vào DbContext.</summary>
     void Add(Category category);
-
-    /// <summary>Đánh dấu danh mục để xóa.</summary>
     void Remove(Category category);
 }
