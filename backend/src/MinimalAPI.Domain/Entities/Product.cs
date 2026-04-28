@@ -63,15 +63,15 @@ public sealed class Product : AggregateRoot<ProductId>
         RaiseDomainEvent(new ProductPriceChangedEvent(Id, oldPrice, newPrice));
     }
 
-    public void Deactivate()
+    public void SetActive(bool isActive)
     {
-        IsActive = false;
+        if (IsActive == isActive) return;
+
+        IsActive = isActive;
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Activate()
-    {
-        IsActive = true;
-        UpdatedAt = DateTime.UtcNow;
-    }
+    public void Deactivate() => SetActive(false);
+
+    public void Activate() => SetActive(true);
 }
