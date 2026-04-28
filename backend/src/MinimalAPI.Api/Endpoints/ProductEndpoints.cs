@@ -10,6 +10,8 @@ using MinimalAPI.Application.Features.Products.GetProductsByCategory;
 using MinimalAPI.Application.Features.Products.GetProducts;
 using MinimalAPI.Application.Features.Products.UpdateProduct;
 using MinimalAPI.Application.Features.Products.UpdateProductActive;
+using MinimalAPI.Application.Features.Products.GetProductDeactive;
+using MinimalAPI.Application.Features.Products.UpdateProductDeactive;
 
 namespace MinimalAPI.Api.Endpoints;
 
@@ -108,18 +110,36 @@ public static class ProductEndpoints
         .WithSummary("Lấy danh sách sản phẩm đang hoạt động")
         .Produces<List<ProductDto>>();
 
-        group.MapPut("/{id:guid}/active", async Task<IResult> (Guid id, UpdateProductActiveCommand command, ISender sender) =>
+        group.MapGet("/deactive", async Task<IResult> (ISender sender) =>
         {
-            if (id != command.Id)
-                return TypedResults.BadRequest(new { error = "Id không khớp." });
+            var result = await sender.Send(new GetProductDeactiveQuery());
+            return TypedResults.Ok(result.Value);
+        })
+        .WithName("GetProductDeactive")
+        .WithSummary("Lấy danh sách sản phẩm không hoạt động")
+        .Produces<List<ProductDto>>();
 
-            var result = await sender.Send(command);
+        group.MapPut("/{id:guid}/active", async Task<IResult> (Guid id, ISender sender) =>
+        {
+            var result = await sender.Send(new UpdateProductActiveCommand(id, true));
             return result.IsSuccess
                 ? TypedResults.Ok(result.Value)
                 : TypedResults.NotFound(new { error = result.Error });
         })
-        .WithName("UpdateProductActive")
-        .WithSummary("Cập nhật trạng thái hoạt động của sản phẩm")
+        .WithName("ActivateProduct")
+        .WithSummary("Bật trạng thái hoạt động của sản phẩm")
+        .Produces<Guid>()
+        .Produces(StatusCodes.Status404NotFound);
+
+        group.MapPut("/{id:guid}/deactive", async Task<IResult> (Guid id, ISender sender) =>
+        {
+            var result = await sender.Send(new UpdateProductDeactiveCommand(id));
+            return result.IsSuccess
+                ? TypedResults.Ok(result.Value)
+                : TypedResults.NotFound(new { error = result.Error });
+        })
+        .WithName("DeactivateProduct")
+        .WithSummary("Tắt trạng thái hoạt động của sản phẩm")
         .Produces<Guid>()
         .Produces(StatusCodes.Status404NotFound);
 

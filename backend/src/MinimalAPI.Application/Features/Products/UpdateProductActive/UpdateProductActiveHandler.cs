@@ -15,6 +15,11 @@ public sealed class UpdateProductActiveHandler(
         var product = await productRepo.GetByIdAsync(new ProductId(request.Id), ct);
         if (product is null)
             return Result<Guid>.Failure("Sản phẩm không tồn tại.");
+
+        var activeProducts = await productRepo.GetActiveProductsAsync(ct);
+        if (request.IsActive && !product.IsActive && activeProducts.Count >= 10)
+            return Result<Guid>.Failure("Không thể kích hoạt sản phẩm. Đã có 10 sản phẩm đang hoạt động.");
+
         product.SetActive(request.IsActive);
         await unitOfWork.SaveChangesAsync(ct);
 

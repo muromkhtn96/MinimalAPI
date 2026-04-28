@@ -45,6 +45,14 @@ public sealed class ProductRepository(AppDbContext db) : IProductRepository
         .ToListAsync(ct);
 
     /// <inheritdoc />
+    public async Task<List<Product>> GetDeactiveProductsAsync(CancellationToken ct = default) =>
+        await db.Products
+            .Include(p => p.Category)
+            .Where(p => !p.IsActive)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync(ct);
+
+    /// <inheritdoc />
     public void Add(Product product) => db.Products.Add(product);
 
     /// <inheritdoc />
