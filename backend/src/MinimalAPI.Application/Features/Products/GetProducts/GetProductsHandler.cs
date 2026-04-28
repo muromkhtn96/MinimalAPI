@@ -1,43 +1,30 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Products.DTOs;
+using MinimalAPI.Domain.Interfaces;
 
 namespace MinimalAPI.Application.Features.Products.GetProducts;
 
-public sealed class GetProductsHandler(IApplicationDbContext db)
+public sealed class GetProductsHandler(IProductRepository productRepository)
     : IRequestHandler<GetProductsQuery, PagedResult<ProductDto>>
 {
     public async Task<PagedResult<ProductDto>> Handle(GetProductsQuery request, CancellationToken ct)
     {
-        var query = db.Products
-            .Join(db.Categories,
-                p => p.CategoryId, c => c.Id,
-                (p, c) => new { Product = p, CategoryName = c.Name });
+        var totalCount = await productRepository.CountAsync(request.Search, ct);
+        var products = await productRepository.GetPagedAsync(request.Page, request.PageSize, request.Search, ct);
 
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var searchLower = request.Search.ToLower();
-            query = query.Where(x => x.Product.Name.Value.ToLower().Contains(searchLower));
-        }
-
-        var totalCount = await query.CountAsync(ct);
-
-        var items = await query
-            .OrderByDescending(x => x.Product.CreatedAt)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
-            .Select(x => new ProductDto(
-                x.Product.Id.Value,
-                x.Product.Name.Value,
-                x.Product.Price.Amount,
-                x.Product.Price.Currency,
-                x.Product.CategoryId.Value,
-                x.CategoryName,
-                x.Product.Description,
-                x.Product.IsActive,
-                x.Product.CreatedAt))
-            .ToListAsync(ct);
+        var items = products
+            .Select(p => new ProductDto(
+                p.Id.Value,
+                p.Name.Value,
+                p.Price.Amount,
+                p.Price.Currency,
+                p.CategoryId.Value,
+                p.Category.Name,
+                p.Description,
+                p.IsActive,
+                p.CreatedAt))
+            .ToList();
 
         return new PagedResult<ProductDto>(items, totalCount, request.Page, request.PageSize);
     }

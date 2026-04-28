@@ -5,6 +5,7 @@ using MinimalAPI.Application.Features.Products.CreateProduct;
 using MinimalAPI.Application.Features.Products.DeleteProduct;
 using MinimalAPI.Application.Features.Products.DTOs;
 using MinimalAPI.Application.Features.Products.GetProduct;
+using MinimalAPI.Application.Features.Products.GetProductsByCategory;
 using MinimalAPI.Application.Features.Products.GetProducts;
 using MinimalAPI.Application.Features.Products.UpdateProduct;
 
@@ -82,6 +83,18 @@ public static class ProductEndpoints
         .WithName("DeleteProduct")
         .WithSummary("Xóa sản phẩm")
         .Produces<Guid>()
+        .Produces(StatusCodes.Status404NotFound);
+
+        group.MapGet("/by-category/{categoryId:guid}", async Task<IResult> (Guid categoryId, ISender sender) =>
+        {
+            var result = await sender.Send(new GetProductsByCategoryQuery(categoryId));
+            return result.IsSuccess
+                ? TypedResults.Ok(result.Value)
+                : TypedResults.NotFound(new { error = result.Error });
+        })
+        .WithName("GetProductsByCategory")
+        .WithSummary("Lấy danh sách sản phẩm theo danh mục")
+        .Produces<List<ProductDto>>()
         .Produces(StatusCodes.Status404NotFound);
 
         return app;
