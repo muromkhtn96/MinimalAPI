@@ -11,6 +11,9 @@ public interface IProductRepository
     /// <summary>Lấy sản phẩm theo Id (null nếu không tìm thấy).</summary>
     Task<Product?> GetByIdAsync(ProductId id, CancellationToken ct = default);
 
+    /// <summary>Lấy danh sách sản phẩm theo danh mục.</summary>
+    Task<List<Product>> GetByCategoryAsync(CategoryId categoryId, CancellationToken ct = default);
+    
     /// <summary>Thêm sản phẩm mới vào DbContext.</summary>
     void Add(Product product);
 

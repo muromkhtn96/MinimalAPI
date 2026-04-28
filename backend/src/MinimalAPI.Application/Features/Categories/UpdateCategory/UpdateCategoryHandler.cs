@@ -16,9 +16,6 @@ public sealed class UpdateCategoryHandler(
         if (category is null)
             return Result<Guid>.Failure("Danh mục không tồn tại.");
 
-        if (await categoryRepo.ExistsByNameAsync(request.Name, new CategoryId(request.Id), ct))
-            return Result<Guid>.Failure("Tên danh mục đã tồn tại.");
-
         category.Update(request.Name, request.Description);
         await unitOfWork.SaveChangesAsync(ct);
 

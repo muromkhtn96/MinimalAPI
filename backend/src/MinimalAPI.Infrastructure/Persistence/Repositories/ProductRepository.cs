@@ -29,6 +29,13 @@ public sealed class ProductRepository(AppDbContext db) : IProductRepository
             .Include(p => p.Category)
             .FirstOrDefaultAsync(p => p.Id == id, ct);
 
+    public async Task<List<Product>> GetByCategoryAsync(CategoryId categoryId, CancellationToken ct = default) =>
+        await db.Products
+            .Include(p => p.Category)
+            .Where(p => p.CategoryId == categoryId)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync(ct);
+
     /// <inheritdoc />
     public void Add(Product product) => db.Products.Add(product);
 
