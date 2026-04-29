@@ -37,6 +37,7 @@ public sealed class ProductRepository(AppDbContext db) : IProductRepository
             .ToListAsync(ct);
 
     /// <inheritdoc />
+
     public async Task<int> CountByCategoryAsync(CategoryId categoryId, CancellationToken ct = default) =>
         await db.Products
             .CountAsync(p => p.CategoryId == categoryId, ct);
