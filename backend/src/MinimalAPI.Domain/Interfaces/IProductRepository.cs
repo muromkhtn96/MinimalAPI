@@ -20,6 +20,9 @@ public interface IProductRepository
     /// <summary>Lấy danh sách sản phẩm tắt hoạt động </summary>
     Task<List<Product>> GetDeactiveProductsAsync(CancellationToken ct = default);
 
+    /// <summary>Đếm số lượng sản phẩm theo danh mục.</summary>
+    Task<int> CountByCategoryAsync(CategoryId categoryId, CancellationToken ct = default);
+
     /// <summary>Thêm sản phẩm mới vào DbContext.</summary>
     void Add(Product product);
 

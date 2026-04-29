@@ -14,30 +14,43 @@ public sealed class CreateCategoryHandler(
 {
     public async Task<Result<Guid>> Handle(CreateCategoryCommand request, CancellationToken ct)
     {
-        logger.LogInformation(
-            "Bắt đầu tạo danh mục. Name={Name}, Description={Description}",
-            request.Name,
-            request.Description);
-
-        if (await categoryRepo.ExistsByNameAsync(request.Name, ct))
+        try
         {
-            logger.LogWarning(
-                "Tạo danh mục thất bại vì tên danh mục đã tồn tại. Name={Name}",
+            logger.LogInformation(
+                "Bắt đầu tạo danh mục. Name={Name}, Description={Description}",
+                request.Name,
+                request.Description);
+
+            if (await categoryRepo.ExistsByNameAsync(request.Name, ct))
+            {
+                logger.LogWarning(
+                    "Tạo danh mục thất bại vì tên danh mục đã tồn tại. Name={Name}",
+                    request.Name);
+
+                return Result<Guid>.Failure("Tên danh mục đã tồn tại.");
+            }
+
+            var category = Category.Create(request.Name, request.Description);
+
+            categoryRepo.Add(category);
+            await unitOfWork.SaveChangesAsync(ct);
+
+            logger.LogInformation(
+                "Danh mục được tạo thành công. CategoryId={CategoryId}, Name={Name}",
+                category.Id.Value,
                 request.Name);
 
-            return Result<Guid>.Failure("Tên danh mục đã tồn tại.");
+            return Result<Guid>.Success(category.Id.Value);
         }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Tạo danh mục thất bại do lỗi hệ thống. Name={Name}, Description={Description}",
+                request.Name,
+                request.Description);
 
-        var category = Category.Create(request.Name, request.Description);
-
-        categoryRepo.Add(category);
-        await unitOfWork.SaveChangesAsync(ct);
-
-        logger.LogInformation(
-            "Danh mục được tạo thành công. CategoryId={CategoryId}, Name={Name}",
-            category.Id.Value,
-            request.Name);
-
-        return Result<Guid>.Success(category.Id.Value);
+            throw;
+        }
     }
 }
