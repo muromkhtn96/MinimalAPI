@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
+using MinimalAPI.Application.Features.Categories.DTOs;
 using MinimalAPI.Domain.Entities;
 using MinimalAPI.Domain.Interfaces;
 
@@ -10,9 +11,9 @@ public sealed class UpdateCategoryHandler(
     ICategoryRepository categoryRepo,
     IUnitOfWork unitOfWork,
     ILogger<UpdateCategoryHandler> logger)
-    : IRequestHandler<UpdateCategoryCommand, Result<Guid>>
+    : IRequestHandler<UpdateCategoryCommand, Result<CategoryDto>>
 {
-    public async Task<Result<Guid>> Handle(UpdateCategoryCommand request, CancellationToken ct)
+    public async Task<Result<CategoryDto>> Handle(UpdateCategoryCommand request, CancellationToken ct)
     {
         try
             {
@@ -29,7 +30,7 @@ public sealed class UpdateCategoryHandler(
                     "Cập nhật danh mục thất bại vì danh mục không tồn tại. Id={Id}",
                     request.Id);
 
-                return Result<Guid>.Failure("Danh mục không tồn tại.");
+                return Result<CategoryDto>.Failure("Danh mục không tồn tại.");
             }
 
             category.Update(request.Name, request.Description);
@@ -39,7 +40,11 @@ public sealed class UpdateCategoryHandler(
                 "Danh mục được cập nhật thành công. CategoryId={CategoryId}, Name={Name}",
                 category.Id.Value,
                 request.Name);
-            return Result<Guid>.Success(category.Id.Value);
+            return Result<CategoryDto>.Success(new CategoryDto(
+                category.Id.Value,
+                category.Name,
+                category.Description,
+                category.CreatedAt));
         }
         catch (Exception ex)
         {

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
+using MinimalAPI.Application.Features.Products.DTOs;
 using MinimalAPI.Domain.Entities;
 using MinimalAPI.Domain.Interfaces;
 
@@ -10,9 +11,9 @@ public sealed class UpdateProductDeactiveHandler(
     IProductRepository productRepository,
     IUnitOfWork unitOfWork,
     ILogger<UpdateProductDeactiveHandler> logger)
-    : IRequestHandler<UpdateProductDeactiveCommand, Result<Guid>>
+    : IRequestHandler<UpdateProductDeactiveCommand, Result<ProductDto>>
 {
-    public async Task<Result<Guid>> Handle(UpdateProductDeactiveCommand request, CancellationToken ct)
+    public async Task<Result<ProductDto>> Handle(UpdateProductDeactiveCommand request, CancellationToken ct)
     {
         try
         {
@@ -27,8 +28,10 @@ public sealed class UpdateProductDeactiveHandler(
                     "Tắt hoạt động sản phẩm thất bại vì sản phẩm không tồn tại. ProductId={ProductId}",
                     request.ProductId);
 
-                return Result<Guid>.Failure("Sản phẩm không tồn tại.");
+                return Result<ProductDto>.Failure("Sản phẩm không tồn tại.");
             }
+
+            await unitOfWork.BeginTransactionAsync(ct);
 
             var deactiveProducts = await productRepository.GetDeactiveProductsAsync(ct);
             if (product.IsActive && deactiveProducts.Count >= 10)
@@ -37,19 +40,31 @@ public sealed class UpdateProductDeactiveHandler(
                     "Tắt hoạt động sản phẩm thất bại vì đã có {DeactiveProductCount} sản phẩm đang tắt hoạt động. ProductId={ProductId}",
                     deactiveProducts.Count,
                     request.ProductId);
-
-                return Result<Guid>.Failure("Không thể tắt sản phẩm. Đã có 10 sản phẩm đang tắt hoạt động.");
+                await unitOfWork.RollbackAsync(ct);
+                return Result<ProductDto>.Failure("Không thể tắt sản phẩm. Đã có 10 sản phẩm đang tắt hoạt động.");
             }
+            
 
             product.Deactivate();
             await unitOfWork.SaveChangesAsync(ct);
+            await unitOfWork.CommitAsync(ct);
 
             logger.LogInformation(
                 "Tắt hoạt động sản phẩm thành công. ProductId={ProductId}, IsActive={IsActive}",
                 product.Id.Value,
                 product.IsActive);
 
-            return Result<Guid>.Success(product.Id.Value);
+            var productDto = new ProductDto(
+                product.Id.Value,
+                product.Name.Value,
+                product.Price.Amount,
+                product.Price.Currency,
+                product.CategoryId.Value,
+                product.Category.Name,
+                product.Description,
+                product.IsActive,
+                product.CreatedAt);
+            return Result<ProductDto>.Success(productDto);
         }
         catch (Exception ex)
         {
@@ -58,6 +73,7 @@ public sealed class UpdateProductDeactiveHandler(
                 "Tắt hoạt động sản phẩm thất bại do lỗi hệ thống. ProductId={ProductId}",
                 request.ProductId);
 
+            await unitOfWork.RollbackAsync(ct);
             throw;
         }
     }

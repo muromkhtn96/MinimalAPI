@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
+using MinimalAPI.Application.Features.Products.DTOs;
 using MinimalAPI.Domain.Entities;
 using MinimalAPI.Domain.Interfaces;
 using MinimalAPI.Domain.ValueObjects;
@@ -11,9 +12,9 @@ public sealed class UpdateProductHandler(
     IProductRepository productRepo,
     IUnitOfWork unitOfWork,
     ILogger<UpdateProductHandler> logger)
-    : IRequestHandler<UpdateProductCommand, Result<Guid>>
+    : IRequestHandler<UpdateProductCommand, Result<ProductDto>>
 {
-    public async Task<Result<Guid>> Handle(UpdateProductCommand request, CancellationToken ct)
+    public async Task<Result<ProductDto>> Handle(UpdateProductCommand request, CancellationToken ct)
     {
         try
         {
@@ -24,6 +25,8 @@ public sealed class UpdateProductHandler(
                 request.CategoryId,
                 request.Price,
                 request.Currency);
+    
+            await unitOfWork.BeginTransactionAsync(ct);
 
             var product = await productRepo.GetByIdAsync(new ProductId(request.Id), ct);
             if (product is null)
@@ -32,8 +35,8 @@ public sealed class UpdateProductHandler(
                     "Cập nhật sản phẩm thất bại vì sản phẩm không tồn tại. ProductId={ProductId}, ProductName={ProductName}",
                     request.Id,
                     request.Name);
-
-                return Result<Guid>.Failure("Sản phẩm không tồn tại.");
+                await unitOfWork.RollbackAsync(ct);
+                return Result<ProductDto>.Failure("Sản phẩm không tồn tại.");
             }
 
             var productName = ProductName.Create(request.Name);
@@ -43,6 +46,7 @@ public sealed class UpdateProductHandler(
             product.UpdatePrice(productPrice);
 
             await unitOfWork.SaveChangesAsync(ct);
+            await unitOfWork.CommitAsync(ct);
 
             logger.LogInformation(
                 "Cập nhật sản phẩm thành công. ProductId={ProductId}, ProductName={ProductName}, CategoryId={CategoryId}",
@@ -50,7 +54,18 @@ public sealed class UpdateProductHandler(
                 request.Name,
                 request.CategoryId);
 
-            return Result<Guid>.Success(product.Id.Value);
+            var productDto = new ProductDto(
+                product.Id.Value,
+                product.Name.Value,
+                product.Price.Amount,
+                product.Price.Currency,
+                product.CategoryId.Value,
+                product.Category.Name,
+                product.Description,
+                product.IsActive,
+                product.CreatedAt);
+
+            return Result<ProductDto>.Success(productDto);
         }
         catch (Exception ex)
         {
@@ -62,8 +77,9 @@ public sealed class UpdateProductHandler(
                 request.CategoryId,
                 request.Price,
                 request.Currency);
-
+            await unitOfWork.RollbackAsync(ct);
             throw;
         }
     }
 }
+

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
+using MinimalAPI.Application.Features.Products.DTOs;
 using MinimalAPI.Domain.Entities;
 using MinimalAPI.Domain.Interfaces;
 
@@ -10,9 +11,11 @@ public sealed class UpdateProductActiveHandler(
     IProductRepository productRepo,
     IUnitOfWork unitOfWork,
     ILogger<UpdateProductActiveHandler> logger)
-    : IRequestHandler<UpdateProductActiveCommand, Result<Guid>>
+    : IRequestHandler<UpdateProductActiveCommand, Result<ProductDto>>
 {
-        public async Task<Result<Guid>> Handle(UpdateProductActiveCommand request, CancellationToken ct)
+    public async Task<Result<ProductDto>> Handle(
+        UpdateProductActiveCommand request, 
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -21,7 +24,7 @@ public sealed class UpdateProductActiveHandler(
                 request.Id,
                 request.IsActive);
 
-            var product = await productRepo.GetByIdAsync(new ProductId(request.Id), ct);
+            var product = await productRepo.GetByIdAsync(new ProductId(request.Id), cancellationToken);
             if (product is null)
             {
                 logger.LogWarning(
@@ -29,29 +32,27 @@ public sealed class UpdateProductActiveHandler(
                     request.Id,
                     request.IsActive);
 
-                return Result<Guid>.Failure("Sản phẩm không tồn tại.");
+                return Result<ProductDto>.Failure("Sản phẩm không tồn tại.");
             }
 
-            var activeProducts = await productRepo.GetActiveProductsAsync(ct);
-            if (request.IsActive && !product.IsActive && activeProducts.Count >= 10)
-            {
-                logger.LogWarning(
-                    "Cập nhật trạng thái sản phẩm thất bại vì đã có {ActiveProductCount} sản phẩm đang hoạt động. ProductId={ProductId}",
-                    activeProducts.Count,
-                    request.Id);
-
-                return Result<Guid>.Failure("Không thể kích hoạt sản phẩm. Đã có 10 sản phẩm đang hoạt động.");
-            }
+            await unitOfWork.BeginTransactionAsync(cancellationToken);
 
             product.SetActive(request.IsActive);
-            await unitOfWork.SaveChangesAsync(ct);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            await unitOfWork.CommitAsync(cancellationToken);
 
-            logger.LogInformation(
-                "Cập nhật trạng thái sản phẩm thành công. ProductId={ProductId}, IsActive={IsActive}",
+            var productDto = new ProductDto(
                 product.Id.Value,
-                request.IsActive);
+                product.Name.Value,
+                product.Price.Amount,
+                product.Price.Currency,
+                product.CategoryId.Value,
+                product.Category.Name,
+                product.Description,
+                product.IsActive,
+                product.CreatedAt);
 
-            return Result<Guid>.Success(product.Id.Value);
+            return Result<ProductDto>.Success(productDto);
         }
         catch (Exception ex)
         {
@@ -61,6 +62,7 @@ public sealed class UpdateProductActiveHandler(
                 request.Id,
                 request.IsActive);
 
+            await unitOfWork.RollbackAsync(cancellationToken);
             throw;
         }
     }

@@ -44,8 +44,11 @@ public sealed class CreateProductHandler(
                 new CategoryId(request.CategoryId),
                 request.Description);
 
+            await unitOfWork.BeginTransactionAsync(ct);
+
             productRepo.Add(product);
             await unitOfWork.SaveChangesAsync(ct);
+            await unitOfWork.CommitAsync(ct);
 
             logger.LogInformation(
                 "Sản phẩm được tạo thành công. ProductId={ProductId}, Name={ProductName}",
@@ -63,7 +66,7 @@ public sealed class CreateProductHandler(
                 request.CategoryId,
                 request.Price,
                 request.Currency);
-
+            await unitOfWork.RollbackAsync(ct);
             throw;
         }
     }

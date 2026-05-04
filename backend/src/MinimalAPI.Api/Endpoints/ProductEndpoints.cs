@@ -73,7 +73,7 @@ public static class ProductEndpoints
         })
         .WithName("UpdateProduct")
         .WithSummary("Cập nhật sản phẩm")
-        .Produces<Guid>()
+        .Produces<ProductDto>()
         .Produces(StatusCodes.Status404NotFound)
         .Produces<ProblemDetails>(StatusCodes.Status400BadRequest);
 
@@ -124,11 +124,11 @@ public static class ProductEndpoints
             var result = await sender.Send(new UpdateProductActiveCommand(id, true));
             return result.IsSuccess
                 ? TypedResults.Ok(result.Value)
-                : TypedResults.NotFound(new { error = result.Error });
+                : TypedResults.BadRequest(new { error = result.Error });
         })
         .WithName("ActivateProduct")
         .WithSummary("Bật trạng thái hoạt động của sản phẩm")
-        .Produces<Guid>()
+        .Produces<ProductDto>()
         .Produces(StatusCodes.Status404NotFound);
 
         group.MapPut("/{id:guid}/deactive", async Task<IResult> (Guid id, ISender sender) =>
@@ -140,7 +140,7 @@ public static class ProductEndpoints
         })
         .WithName("DeactivateProduct")
         .WithSummary("Tắt trạng thái hoạt động của sản phẩm")
-        .Produces<Guid>()
+        .Produces<ProductDto>()
         .Produces(StatusCodes.Status404NotFound);
 
         return app;

@@ -64,7 +64,7 @@ public static class CategoryEndpoints
         })
         .WithName("UpdateCategory")
         .WithSummary("Cập nhật danh mục")
-        .Produces<Guid>()
+        .Produces<CategoryDto>()
         .Produces(StatusCodes.Status404NotFound)
         .Produces<ProblemDetails>(StatusCodes.Status400BadRequest);
 

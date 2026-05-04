@@ -30,8 +30,11 @@ public sealed class DeleteProductHandler(
                 return Result<Guid>.Failure("Sản phẩm không tồn tại.");
             }
 
+            await unitOfWork.BeginTransactionAsync(ct);
+
             productRepo.Remove(product);
             await unitOfWork.SaveChangesAsync(ct);
+            await unitOfWork.CommitAsync(ct);
 
             logger.LogInformation(
                 "Xóa sản phẩm thành công. ProductId={ProductId}, ProductName={ProductName}",
@@ -47,6 +50,7 @@ public sealed class DeleteProductHandler(
                 "Xóa sản phẩm thất bại do lỗi hệ thống. ProductId={ProductId}",
                 request.Id);
 
+            await unitOfWork.RollbackAsync(ct);
             throw;
         }
     }

@@ -1,6 +1,6 @@
 using MediatR;
 using MinimalAPI.Application.Abstractions;
-
+using MinimalAPI.Application.Features.Products.DTOs;    
 namespace MinimalAPI.Application.Features.Products.UpdateProduct;
 
 /// <summary>Command cập nhật sản phẩm.</summary>
@@ -16,4 +16,5 @@ public record UpdateProductCommand(
     /// <summary>Mã danh mục.</summary>
     Guid CategoryId,
     /// <summary>Mô tả sản phẩm (không bắt buộc).</summary>
-    string? Description) : IRequest<Result<Guid>>;
+    string? Description) : IRequest<Result<ProductDto>>;
+    
