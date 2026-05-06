@@ -18,6 +18,9 @@ public sealed class Product : AggregateRoot<ProductId>
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
+    public Category Category { get; private set; } = default!; // Navigation property}
+
+
     // EF Core cần parameterless constructor
     private Product() { }
 
@@ -72,5 +75,13 @@ public sealed class Product : AggregateRoot<ProductId>
     {
         IsActive = true;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetActive(bool isActive)
+    {
+        if (isActive)
+            Activate();
+        else
+            Deactivate();
     }
 }

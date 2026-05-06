@@ -5,8 +5,10 @@ using MinimalAPI.Application.Features.Products.CreateProduct;
 using MinimalAPI.Application.Features.Products.DeleteProduct;
 using MinimalAPI.Application.Features.Products.DTOs;
 using MinimalAPI.Application.Features.Products.GetProduct;
+using MinimalAPI.Application.Features.Products.GetProductActive;
 using MinimalAPI.Application.Features.Products.GetProducts;
 using MinimalAPI.Application.Features.Products.UpdateProduct;
+using MinimalAPI.Application.Features.Products.UpdateProductActive;
 
 namespace MinimalAPI.Api.Endpoints;
 
@@ -81,6 +83,29 @@ public static class ProductEndpoints
         })
         .WithName("DeleteProduct")
         .WithSummary("Xóa sản phẩm")
+        .Produces<Guid>()
+        .Produces(StatusCodes.Status404NotFound);
+
+        group.MapGet("/active", async Task<IResult> (ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetProductActiveQuery(), ct);
+            return result.IsSuccess
+                ? TypedResults.Ok(result.Value)
+                : TypedResults.BadRequest(new { error = result.Error });
+        })
+        .WithName("GetActiveProducts")
+        .WithSummary("Lấy danh sách sản phẩm đang hoạt động")
+        .Produces<List<ProductDto>>();
+
+        group.MapPut("/{id:guid}/active", async Task<IResult> (Guid id, UpdateProductActiveCommand command, ISender sender) =>
+        {
+            var result = await sender.Send(new UpdateProductActiveCommand(id, true));
+            return result.IsSuccess
+                ? TypedResults.Ok(result.Value)
+                : TypedResults.NotFound(new { error = result.Error });
+        })
+        .WithName("UpdateProductActive")
+        .WithSummary("Bật trạng thái hoạt động của sản phẩm")
         .Produces<Guid>()
         .Produces(StatusCodes.Status404NotFound);
 

@@ -13,4 +13,10 @@ public interface IProductRepository
 
     /// <summary>Đánh dấu sản phẩm để xóa.</summary>
     void Remove(Product product);
+    Task<List<Product>> GetActiveProductsAsync(CancellationToken ct = default);
+
+    /// <summary>Kiểm tra sản phẩm có hoạt động không.</summary>
+    Task<bool> IsActiveAsync(ProductId id, CancellationToken ct = default);
+
+    
 }
