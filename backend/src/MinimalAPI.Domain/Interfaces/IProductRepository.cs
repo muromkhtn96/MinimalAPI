@@ -13,4 +13,11 @@ public interface IProductRepository
 
     /// <summary>Đánh dấu sản phẩm để xóa.</summary>
     void Remove(Product product);
+
+    /// <summary>Kiểm tra sản phẩm tắt hoạt động.</summary>
+    Task<bool> IsDeactiveAsync(ProductId id, CancellationToken ct = default);
+    Task<IEnumerable<Product>> GetDeactiveProductsAsync(CancellationToken ct);
+    
+    /// <summary> Tắt hoạt động sản phẩm. </summary>
+    Task DeactivateAsync(ProductId id, CancellationToken ct = default);
 }

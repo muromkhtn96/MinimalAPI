@@ -5,8 +5,10 @@ using MinimalAPI.Application.Features.Products.CreateProduct;
 using MinimalAPI.Application.Features.Products.DeleteProduct;
 using MinimalAPI.Application.Features.Products.DTOs;
 using MinimalAPI.Application.Features.Products.GetProduct;
+using MinimalAPI.Application.Features.Products.GetProductDeactive;
 using MinimalAPI.Application.Features.Products.GetProducts;
 using MinimalAPI.Application.Features.Products.UpdateProduct;
+using MinimalAPI.Application.Features.Products.UpdateProductDeactive;
 
 namespace MinimalAPI.Api.Endpoints;
 
@@ -84,6 +86,27 @@ public static class ProductEndpoints
         .Produces<Guid>()
         .Produces(StatusCodes.Status404NotFound);
 
+        group.MapGet("/deactive", async Task<IResult> (ISender sender) =>
+        {
+            var result = await sender.Send(new GetProductDeactiveQuery());
+            return result.IsSuccess
+                ? TypedResults.Ok(result.Value)
+                : TypedResults.BadRequest(new { error = result.Error });
+        })
+        .WithName("GetProductDeactive")
+        .WithSummary("Lấy danh sách sản phẩm đã tắt hoạt động")
+        .Produces<List<ProductDto>>();
+
+        group.MapPut("/deactive/{id:guid}", async Task<IResult> (Guid id, ISender sender) =>
+        {
+            var result = await sender.Send(new UpdateProductDeactiveCommand(id));
+            return result.IsSuccess
+                ? TypedResults.Ok(result.Value)
+                : TypedResults.NotFound(new { error = result.Error });
+        })
+        .WithName("UpdateProductDeactive")
+        .WithSummary("Tắt hoạt động sản phẩm");
+        
         return app;
     }
 }

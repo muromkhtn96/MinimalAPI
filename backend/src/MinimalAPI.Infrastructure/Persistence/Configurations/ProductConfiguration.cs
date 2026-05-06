@@ -46,6 +46,12 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasColumnName("category_id")
             .HasConversion(id => id.Value, value => new CategoryId(value));
 
+        builder.HasOne(p => p.Category)
+            .WithMany()
+            .HasForeignKey(p => p.CategoryId)
+            .OnDelete(DeleteBehavior.Cascade)
+            .IsRequired();
+
         builder.Property(p => p.Description)
             .HasColumnName("description");
 
