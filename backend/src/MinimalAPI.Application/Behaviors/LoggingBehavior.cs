@@ -4,9 +4,6 @@ using Microsoft.Extensions.Logging;
 
 namespace MinimalAPI.Application.Behaviors;
 
-/// <summary>
-/// Pipeline behavior — log tên request và thời gian xử lý.
-/// </summary>
 public sealed class LoggingBehavior<TRequest, TResponse>(
     ILogger<LoggingBehavior<TRequest, TResponse>> logger)
     : IPipelineBehavior<TRequest, TResponse>
@@ -18,14 +15,17 @@ public sealed class LoggingBehavior<TRequest, TResponse>(
         CancellationToken cancellationToken)
     {
         var requestName = typeof(TRequest).Name;
-        logger.LogInformation("Handling {RequestName}", requestName);
 
         var sw = Stopwatch.StartNew();
         var response = await next(cancellationToken);
         sw.Stop();
 
-        logger.LogInformation("Handled {RequestName} in {ElapsedMs}ms",
+        logger.LogInformation("{RequestName} hoàn thành trong {ElapsedMs}ms",
             requestName, sw.ElapsedMilliseconds);
+
+        if (sw.ElapsedMilliseconds > 500)
+            logger.LogWarning("{RequestName} mất {ElapsedMs}ms — chậm hơn mong đợi",
+                requestName, sw.ElapsedMilliseconds);
 
         return response;
     }

@@ -1,14 +1,12 @@
 using FluentValidation;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace MinimalAPI.Application.Behaviors;
 
-/// <summary>
-/// Pipeline behavior — tự động validate request trước khi xử lý.
-/// Nếu có lỗi validation → throw ValidationException (sẽ được catch ở middleware).
-/// </summary>
 public sealed class ValidationBehavior<TRequest, TResponse>(
-    IEnumerable<IValidator<TRequest>> validators)
+    IEnumerable<IValidator<TRequest>> validators,
+    ILogger<ValidationBehavior<TRequest, TResponse>> logger)
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
 {
@@ -31,7 +29,13 @@ public sealed class ValidationBehavior<TRequest, TResponse>(
             .ToList();
 
         if (failures.Count != 0)
+        {
+            logger.LogWarning("{RequestName} xác thực thất bại: {Errors}",
+                typeof(TRequest).Name,
+                string.Join("; ", failures.Select(f => $"{f.PropertyName}: {f.ErrorMessage}")));
+
             throw new ValidationException(failures);
+        }
 
         return await next(cancellationToken);
     }

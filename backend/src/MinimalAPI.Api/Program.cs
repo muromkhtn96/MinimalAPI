@@ -74,39 +74,16 @@ app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>
     {
+        var logger = context.RequestServices
+            .GetRequiredService<ILogger<Program>>();
+
         var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
 
         var problemDetails = exception switch
         {
-            ValidationException validationEx => new Microsoft.AspNetCore.Mvc.ProblemDetails
-            {
-                Status = 400,
-                Title = "Validation Error",
-                Detail = "One or more validation errors occurred.",
-                Extensions =
-                {
-                    ["traceId"] = context.TraceIdentifier,
-                    ["errors"] = validationEx.Errors
-                        .GroupBy(e => e.PropertyName)
-                        .ToDictionary(
-                            g => g.Key,
-                            g => g.Select(e => e.ErrorMessage).ToArray())
-                }
-            },
-            DomainException domainEx => new Microsoft.AspNetCore.Mvc.ProblemDetails
-            {
-                Status = 400,
-                Title = "Domain Error",
-                Detail = domainEx.Message,
-                Extensions = { ["traceId"] = context.TraceIdentifier }
-            },
-            _ => new Microsoft.AspNetCore.Mvc.ProblemDetails
-            {
-                Status = 500,
-                Title = "Internal Server Error",
-                Detail = "Đã xảy ra lỗi hệ thống.",
-                Extensions = { ["traceId"] = context.TraceIdentifier }
-            }
+            ValidationException validationEx => BuildValidationProblem(validationEx, context, logger),
+            DomainException domainEx         => BuildDomainProblem(domainEx, context, logger),
+            _                                => BuildUnhandledProblem(exception, context, logger)
         };
 
         context.Response.StatusCode = problemDetails.Status ?? 500;
@@ -115,36 +92,100 @@ app.UseExceptionHandler(errorApp =>
     });
 });
 
-// HTTPS redirect — production chạy sau reverse proxy (nginx/traefik) nên bỏ qua
 if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 
 app.UseCors("frontend");
 app.UseRateLimiter();
 
-// Swagger — chỉ Development
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// Map endpoints
 app.MapProductEndpoints();
 app.MapCategoryEndpoints();
 app.MapHealthChecks("/health");
 
-// Auto migrate — idempotent, an toàn cho mọi environment
 using (var scope = app.Services.CreateScope())
 {
+    var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
 
-    // Seed data — chỉ Development
-    if (app.Environment.IsDevelopment())
+    try
     {
-        await SeedData.SeedAsync(db);
+        await db.Database.MigrateAsync();
+        startupLogger.LogInformation("Database migration applied successfully");
+
+        if (app.Environment.IsDevelopment())
+        {
+            await SeedData.SeedAsync(db);
+            startupLogger.LogInformation("Seed data applied (Development only)");
+        }
+    }
+    catch (Exception ex)
+    {
+        startupLogger.LogError(ex, "Database migration failed — application cannot start");
+        throw;
     }
 }
 
 app.Run();
+
+/// -------------------Helpers------------------- ///
+static Microsoft.AspNetCore.Mvc.ProblemDetails BuildValidationProblem(
+    ValidationException ex,
+    HttpContext context,
+    Microsoft.Extensions.Logging.ILogger logger)
+
+{
+    logger.LogWarning("Validation error on {TraceId}: {Errors}",
+        context.TraceIdentifier,
+        string.Join("; ", ex.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}")));
+
+    return new Microsoft.AspNetCore.Mvc.ProblemDetails
+    {
+        Status = 400,
+        Title = "Validation Error",
+        Detail = "One or more validation errors occurred.",
+        Extensions =
+        {
+            ["traceId"] = context.TraceIdentifier,
+            ["errors"] = ex.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(e => e.ErrorMessage).ToArray())
+        }
+    };
+}
+
+static Microsoft.AspNetCore.Mvc.ProblemDetails BuildDomainProblem(
+    DomainException ex, HttpContext context, Microsoft.Extensions.Logging.ILogger logger)
+{
+    logger.LogWarning("Domain rule violation on {TraceId}: {Message}",
+        context.TraceIdentifier, ex.Message);
+
+    return new Microsoft.AspNetCore.Mvc.ProblemDetails
+    {
+        Status = 400,
+        Title = "Domain Error",
+        Detail = ex.Message,
+        Extensions = { ["traceId"] = context.TraceIdentifier }
+    };
+}
+
+static Microsoft.AspNetCore.Mvc.ProblemDetails BuildUnhandledProblem(
+    Exception? ex, HttpContext context, Microsoft.Extensions.Logging.ILogger logger)
+{
+    logger.LogError(ex, "Unhandled exception on {TraceId}", context.TraceIdentifier);
+
+    return new Microsoft.AspNetCore.Mvc.ProblemDetails
+    {
+        Status = 500,
+        Title = "Internal Server Error",
+        Detail = "Đã xảy ra lỗi hệ thống.",
+        Extensions = { ["traceId"] = context.TraceIdentifier }
+    };
+}
