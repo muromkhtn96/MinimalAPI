@@ -53,12 +53,12 @@ public static class ProductEndpoints
         {
             var result = await sender.Send(command);
             return result.IsSuccess
-                ? TypedResults.Created($"/api/products/{result.Value}", result.Value)
+                ? TypedResults.Created($"/api/products/{result.Value!.Id}", result.Value)
                 : TypedResults.BadRequest(new { error = result.Error });
         })
         .WithName("CreateProduct")
         .WithSummary("Tạo sản phẩm mới")
-        .Produces<Guid>(StatusCodes.Status201Created)
+        .Produces<ProductDto>(StatusCodes.Status201Created)
         .Produces<ProblemDetails>(StatusCodes.Status400BadRequest);
 
         group.MapPut("/{id:guid}", async Task<IResult> (Guid id, UpdateProductCommand command, ISender sender) =>
@@ -73,7 +73,7 @@ public static class ProductEndpoints
         })
         .WithName("UpdateProduct")
         .WithSummary("Cập nhật sản phẩm")
-        .Produces<Guid>()
+        .Produces<ProductDto>()
         .Produces(StatusCodes.Status404NotFound)
         .Produces<ProblemDetails>(StatusCodes.Status400BadRequest);
 
@@ -86,7 +86,7 @@ public static class ProductEndpoints
         })
         .WithName("DeleteProduct")
         .WithSummary("Xóa sản phẩm")
-        .Produces<Guid>()
+        .Produces<ProductDto>()
         .Produces(StatusCodes.Status404NotFound);
 
         group.MapGet("/by-category/{categoryId:guid}", async Task<IResult> (Guid categoryId, ISender sender) =>
@@ -121,14 +121,14 @@ public static class ProductEndpoints
 
         group.MapPut("/{id:guid}/active", async Task<IResult> (Guid id, ISender sender) =>
         {
-            var result = await sender.Send(new UpdateProductActiveCommand(id, true));
+            var result = await sender.Send(new UpdateProductActiveCommand(id));
             return result.IsSuccess
                 ? TypedResults.Ok(result.Value)
                 : TypedResults.NotFound(new { error = result.Error });
         })
         .WithName("ActivateProduct")
         .WithSummary("Bật trạng thái hoạt động của sản phẩm")
-        .Produces<Guid>()
+        .Produces<ProductDto>()
         .Produces(StatusCodes.Status404NotFound);
 
         group.MapPut("/{id:guid}/deactive", async Task<IResult> (Guid id, ISender sender) =>
@@ -140,7 +140,7 @@ public static class ProductEndpoints
         })
         .WithName("DeactivateProduct")
         .WithSummary("Tắt trạng thái hoạt động của sản phẩm")
-        .Produces<Guid>()
+        .Produces<ProductDto>()
         .Produces(StatusCodes.Status404NotFound);
 
         return app;

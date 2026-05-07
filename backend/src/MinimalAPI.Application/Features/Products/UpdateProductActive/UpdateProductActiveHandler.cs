@@ -1,5 +1,6 @@
 using MediatR;
 using MinimalAPI.Application.Abstractions;
+using MinimalAPI.Application.Features.Products.DTOs;
 using MinimalAPI.Domain.Entities;
 using MinimalAPI.Domain.Interfaces;
 
@@ -8,21 +9,30 @@ namespace MinimalAPI.Application.Features.Products.UpdateProductActive;
 public sealed class UpdateProductActiveHandler(
     IProductRepository productRepo,
     IUnitOfWork unitOfWork)
-    : IRequestHandler<UpdateProductActiveCommand, Result<Guid>>
+    : IRequestHandler<UpdateProductActiveCommand, Result<ProductDto>>
 {
-    public async Task<Result<Guid>> Handle(UpdateProductActiveCommand request, CancellationToken ct)
+    public async Task<Result<ProductDto>> Handle(UpdateProductActiveCommand request, CancellationToken ct)
     {
         var product = await productRepo.GetByIdAsync(new ProductId(request.Id), ct);
         if (product is null)
-            return Result<Guid>.Failure("Sản phẩm không tồn tại.");
+            return Result<ProductDto>.Failure("Sản phẩm không tồn tại.");
 
         var activeProducts = await productRepo.GetActiveProductsAsync(ct);
-        if (request.IsActive && !product.IsActive && activeProducts.Count >= 10)
-            return Result<Guid>.Failure("Không thể kích hoạt sản phẩm. Đã có 10 sản phẩm đang hoạt động.");
+        if (!product.IsActive && activeProducts.Count >= 10)
+            return Result<ProductDto>.Failure("Không thể kích hoạt sản phẩm. Đã có 10 sản phẩm đang hoạt động.");
 
-        product.SetActive(request.IsActive);
+        product.Activate();
         await unitOfWork.SaveChangesAsync(ct);
 
-        return Result<Guid>.Success(product.Id.Value);
+        return Result<ProductDto>.Success(new ProductDto(
+            product.Id.Value,
+            product.Name.Value,
+            product.Price.Amount,
+            product.Price.Currency,
+            product.CategoryId.Value,
+            product.Category.Name,
+            product.Description,
+            product.IsActive,
+            product.CreatedAt));
     }
 }
