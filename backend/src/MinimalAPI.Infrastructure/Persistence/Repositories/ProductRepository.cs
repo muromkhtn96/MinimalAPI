@@ -29,6 +29,7 @@ public sealed class ProductRepository(AppDbContext db) : IProductRepository
             .Include(p => p.Category)
             .FirstOrDefaultAsync(p => p.Id == id, ct);
 
+    /// <inheritdoc />
     public async Task<List<Product>> GetByCategoryAsync(CategoryId categoryId, CancellationToken ct = default) =>
         await db.Products
             .Include(p => p.Category)
@@ -38,11 +39,11 @@ public sealed class ProductRepository(AppDbContext db) : IProductRepository
 
     /// <inheritdoc />
     public async Task<List<Product>> GetActiveProductsAsync(CancellationToken ct = default) =>
-    await db.Products
-        .Include(p => p.Category)
-        .Where(p => p.IsActive)
-        .OrderByDescending(p => p.CreatedAt)
-        .ToListAsync(ct);
+        await db.Products
+            .Include(p => p.Category)
+            .Where(p => p.IsActive)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync(ct);
 
     /// <inheritdoc />
     public async Task<List<Product>> GetDeactiveProductsAsync(CancellationToken ct = default) =>
@@ -51,6 +52,10 @@ public sealed class ProductRepository(AppDbContext db) : IProductRepository
             .Where(p => !p.IsActive)
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync(ct);
+
+    /// <inheritdoc />
+    public async Task<bool> ExistsByNameAsync(string name, CancellationToken ct = default) =>
+        await db.Products.AnyAsync(p => p.Name.Value == name, ct);
 
     /// <inheritdoc />
     public void Add(Product product) => db.Products.Add(product);

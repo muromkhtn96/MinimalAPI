@@ -36,7 +36,7 @@ public static class CategoryEndpoints
                 : TypedResults.NotFound();
         })
         .WithName("GetCategory")
-        .WithSummary("Lấy chi tiết danh mục theo Id")
+        .WithSummary("Lấy chi tiết danh mục")
         .Produces<CategoryDto>()
         .Produces(StatusCodes.Status404NotFound);
 
@@ -44,12 +44,12 @@ public static class CategoryEndpoints
         {
             var result = await sender.Send(command);
             return result.IsSuccess
-                ? TypedResults.Created($"/api/categories/{result.Value}", result.Value)
+                ? TypedResults.Created($"/api/categories/{result.Value!.Id}", result.Value)
                 : TypedResults.BadRequest(new { error = result.Error });
         })
         .WithName("CreateCategory")
         .WithSummary("Tạo danh mục mới")
-        .Produces<Guid>(StatusCodes.Status201Created)
+        .Produces<CategoryDto>(StatusCodes.Status201Created)
         .Produces<ProblemDetails>(StatusCodes.Status400BadRequest);
 
         group.MapPut("/{id:guid}", async Task<IResult> (Guid id, UpdateCategoryCommand command, ISender sender) =>
@@ -64,7 +64,7 @@ public static class CategoryEndpoints
         })
         .WithName("UpdateCategory")
         .WithSummary("Cập nhật danh mục")
-        .Produces<Guid>()
+        .Produces<CategoryDto>()
         .Produces(StatusCodes.Status404NotFound)
         .Produces<ProblemDetails>(StatusCodes.Status400BadRequest);
 
@@ -77,7 +77,7 @@ public static class CategoryEndpoints
         })
         .WithName("DeleteCategory")
         .WithSummary("Xóa danh mục")
-        .Produces<Guid>()
+        .Produces<CategoryDto>()
         .Produces(StatusCodes.Status404NotFound);
 
         return app;
