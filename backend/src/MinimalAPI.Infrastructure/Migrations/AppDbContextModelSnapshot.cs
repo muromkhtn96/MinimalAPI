@@ -51,6 +51,36 @@ namespace MinimalAPI.Infrastructure.Migrations
                     b.ToTable("categories", (string)null);
                 });
 
+            modelBuilder.Entity("MinimalAPI.Domain.Entities.Inventory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<long>("Quantity")
+                        .HasColumnType("bigint")
+                        .HasColumnName("quantity");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId")
+                        .IsUnique();
+
+                    b.ToTable("inventories", (string)null);
+                });
+
             modelBuilder.Entity("MinimalAPI.Domain.Entities.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -108,6 +138,17 @@ namespace MinimalAPI.Infrastructure.Migrations
                     b.HasIndex("CategoryId");
 
                     b.ToTable("products", (string)null);
+                });
+
+            modelBuilder.Entity("MinimalAPI.Domain.Entities.Inventory", b =>
+                {
+                    b.HasOne("MinimalAPI.Domain.Entities.Product", "Product")
+                        .WithOne()
+                        .HasForeignKey("MinimalAPI.Domain.Entities.Inventory", "ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("MinimalAPI.Domain.Entities.Product", b =>

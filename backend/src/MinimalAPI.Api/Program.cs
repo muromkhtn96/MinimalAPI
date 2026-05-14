@@ -44,6 +44,15 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "MinimalAPI", Version = "v1" });
+
+    // Tích hợp XML comments nếu file tồn tại
+    var apiXmlPath = Path.Combine(AppContext.BaseDirectory, "MinimalAPI.Api.xml");
+    if (File.Exists(apiXmlPath))
+        c.IncludeXmlComments(apiXmlPath);
+
+    var appXmlPath = Path.Combine(AppContext.BaseDirectory, "MinimalAPI.Application.xml");
+    if (File.Exists(appXmlPath))
+        c.IncludeXmlComments(appXmlPath);
 });
 
 // CORS
@@ -106,6 +115,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapProductEndpoints();
 app.MapCategoryEndpoints();
+app.MapInventoryEndpoints();
 app.MapHealthChecks("/health");
 
 using (var scope = app.Services.CreateScope())
@@ -138,54 +148,52 @@ static Microsoft.AspNetCore.Mvc.ProblemDetails BuildValidationProblem(
     ValidationException ex,
     HttpContext context,
     Microsoft.Extensions.Logging.ILogger logger)
-
 {
-    logger.LogWarning("Validation error on {TraceId}: {Errors}",
-        context.TraceIdentifier,
-        string.Join("; ", ex.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}")));
+    logger.LogWarning(ex, "Xác thực thất bại tại {Path}", context.Request.Path);
 
-    return new Microsoft.AspNetCore.Mvc.ProblemDetails
+    var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails
     {
-        Status = 400,
-        Title = "Validation Error",
-        Detail = "One or more validation errors occurred.",
-        Extensions =
-        {
-            ["traceId"] = context.TraceIdentifier,
-            ["errors"] = ex.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(e => e.ErrorMessage).ToArray())
-        }
+        Status = StatusCodes.Status400BadRequest,
+        Title = "Lỗi xác thực dữ liệu",
+        Detail = "Dữ liệu gửi lên không hợp lệ, vui lòng kiểm tra lại.",
+        Instance = context.Request.Path
     };
+
+    problem.Extensions["errors"] = ex.Errors
+        .GroupBy(e => e.PropertyName)
+        .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+
+    return problem;
 }
 
 static Microsoft.AspNetCore.Mvc.ProblemDetails BuildDomainProblem(
-    DomainException ex, HttpContext context, Microsoft.Extensions.Logging.ILogger logger)
+    DomainException ex,
+    HttpContext context,
+    Microsoft.Extensions.Logging.ILogger logger)
 {
-    logger.LogWarning("Domain rule violation on {TraceId}: {Message}",
-        context.TraceIdentifier, ex.Message);
+    logger.LogWarning(ex, "Vi phạm quy tắc nghiệp vụ: {Message}", ex.Message);
 
     return new Microsoft.AspNetCore.Mvc.ProblemDetails
     {
-        Status = 400,
-        Title = "Domain Error",
-        Detail = ex.Message,
-        Extensions = { ["traceId"] = context.TraceIdentifier }
+        Status = StatusCodes.Status422UnprocessableEntity,
+        Title = "Vi phạm quy tắc nghiệp vụ",
+        Detail = ex.Message, // Message từ Domain thường đã được viết bằng tiếng Việt
+        Instance = context.Request.Path
     };
 }
 
 static Microsoft.AspNetCore.Mvc.ProblemDetails BuildUnhandledProblem(
-    Exception? ex, HttpContext context, Microsoft.Extensions.Logging.ILogger logger)
+    Exception? ex,
+    HttpContext context,
+    Microsoft.Extensions.Logging.ILogger logger)
 {
-    logger.LogError(ex, "Unhandled exception on {TraceId}", context.TraceIdentifier);
+    logger.LogError(ex, "Lỗi không xác định tại {Path}", context.Request.Path);
 
     return new Microsoft.AspNetCore.Mvc.ProblemDetails
     {
-        Status = 500,
-        Title = "Internal Server Error",
-        Detail = "Đã xảy ra lỗi hệ thống.",
-        Extensions = { ["traceId"] = context.TraceIdentifier }
+        Status = StatusCodes.Status500InternalServerError,
+        Title = "Lỗi hệ thống",
+        Detail = "Đã có lỗi bất ngờ xảy ra. Vui lòng thử lại sau hoặc liên hệ quản trị viên.",
+        Instance = context.Request.Path
     };
 }

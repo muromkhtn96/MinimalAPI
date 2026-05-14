@@ -1,0 +1,37 @@
+using MediatR;
+using MinimalAPI.Application.Features.Inventories.DTO;
+using MinimalAPI.Domain.Interfaces;
+
+namespace MinimalAPI.Application.Features.Inventories.GetInventory;
+
+public sealed record GetInventoryHandler(
+    IInventoryRepository inventoryRepository,
+    IProductRepository productRepository,
+    IUnitOfWork unitOfWork
+) : IRequestHandler<GetInventoryQuery, List<InventoryDto>>
+{
+    public async Task<List<InventoryDto>> Handle(GetInventoryQuery request, CancellationToken ct)
+    {
+        var inventory = await inventoryRepository.GetByIdAsync(request.Id, ct);
+
+        if (inventory is null)
+        {
+            return new List<InventoryDto>();
+        }
+
+        var product = await productRepository.GetByIdAsync(inventory.ProductId, ct);
+
+        if (product is null)
+        {
+            return new List<InventoryDto>();
+        }
+
+        return new List<InventoryDto>
+        {
+            new InventoryDto(
+                inventory.Id.Value,
+                inventory.ProductId.Value,
+                inventory.Quantity)
+        };
+    }
+}
