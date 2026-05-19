@@ -3,13 +3,10 @@ using MinimalAPI.Domain.Entities;
 namespace MinimalAPI.Domain.Interfaces;
 
 /// <summary>Repository cho Aggregate Root — Product.</summary>
-public interface IProductRepository
+public interface IProductRepository : IRepository<Product, ProductId>
 {
     Task<int> CountAsync(string? search, CancellationToken ct = default);
     Task<List<Product>> GetPagedAsync(int page, int pageSize, string? search, CancellationToken ct = default);
-
-    /// <summary>Lấy sản phẩm theo Id (null nếu không tìm thấy).</summary>
-    Task<Product?> GetByIdAsync(ProductId id, CancellationToken ct = default);
 
     /// <summary>Lấy danh sách sản phẩm theo danh mục.</summary>
     Task<List<Product>> GetByCategoryAsync(CategoryId categoryId, CancellationToken ct = default);
@@ -22,10 +19,4 @@ public interface IProductRepository
 
     /// <summary>Kiểm tra tên sản phẩm đã tồn tại chưa.</summary>
     Task<bool> ExistsByNameAsync(string name, CancellationToken ct = default);
-
-    /// <summary>Thêm sản phẩm mới vào DbContext.</summary>
-    void Add(Product product);
-
-    /// <summary>Đánh dấu sản phẩm để xóa.</summary>
-    void Remove(Product product);
 }

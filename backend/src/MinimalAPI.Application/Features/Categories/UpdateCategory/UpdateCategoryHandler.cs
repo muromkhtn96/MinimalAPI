@@ -9,7 +9,7 @@ namespace MinimalAPI.Application.Features.Categories.UpdateCategory;
 
 public sealed class UpdateCategoryHandler(
     ICategoryRepository categoryRepo,
-    IUnitOfWork unitOfWork,
+    IUnitOfWorkManager unitOfWorkManager,
     ILogger<UpdateCategoryHandler> logger)
     : IRequestHandler<UpdateCategoryCommand, Result<CategoryDto>>
 {
@@ -28,16 +28,26 @@ public sealed class UpdateCategoryHandler(
             return Result<CategoryDto>.Failure("Tên danh mục đã tồn tại.");
         }
 
-        category.Update(request.Name, request.Description);
-        await unitOfWork.SaveChangesAsync(ct);
+        await using var unitOfWork = await unitOfWorkManager.NewUnitOfWorkAsync(ct);
+        try
+        {
+            category.Update(request.Name, request.Description);
+            await unitOfWork.CommitAsync(ct);
 
-        logger.LogInformation("Danh mục {CategoryId} đã được cập nhật - tên mới: '{Name}'",
-            category.Id.Value, category.Name);
+            logger.LogInformation("Danh mục {CategoryId} đã được cập nhật - tên mới: '{Name}'",
+                category.Id.Value, category.Name);
 
-        return Result<CategoryDto>.Success(new CategoryDto(
-            category.Id.Value,
-            category.Name,
-            category.Description,
-            category.CreatedAt));
+            return Result<CategoryDto>.Success(new CategoryDto(
+                category.Id.Value,
+                category.Name,
+                category.Description,
+                category.CreatedAt));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Cập nhật danh mục {CategoryId} thất bại - đã rollback", request.Id);
+            await unitOfWork.RollbackAsync(ct);
+            throw;
+        }
     }
 }

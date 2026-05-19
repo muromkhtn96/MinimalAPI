@@ -60,7 +60,7 @@ services:
     container_name: Api
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=minimalapi_dev;Username=postgres;Password=postgres123"
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=minimalapi_dev;Username=postgres;Password=123456"
       Serilog__WriteTo__2__Name: Seq
       Serilog__WriteTo__2__Args__serverUrl: "http://seq:5341"
     ports:

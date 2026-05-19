@@ -11,7 +11,7 @@ namespace MinimalAPI.Application.Features.Products.CreateProduct;
 public sealed class CreateProductHandler(
     ICategoryRepository categoryRepo,
     IProductRepository productRepo,
-    IUnitOfWork unitOfWork,
+    IUnitOfWorkManager unitOfWorkManager,
     ILogger<CreateProductHandler> logger)
     : IRequestHandler<CreateProductCommand, Result<ProductDto>>
 {
@@ -30,27 +30,37 @@ public sealed class CreateProductHandler(
             return Result<ProductDto>.Failure("Tên sản phẩm đã tồn tại.");
         }
 
-        var product = Product.Create(
-            ProductName.Create(request.Name),
-            Money.Create(request.Price, request.Currency),
-            new CategoryId(request.CategoryId),
-            request.Description);
+        await using var unitOfWork = await unitOfWorkManager.NewUnitOfWorkAsync(ct);
+        try
+        {
+            var product = Product.Create(
+                ProductName.Create(request.Name),
+                Money.Create(request.Price, request.Currency),
+                new CategoryId(request.CategoryId),
+                request.Description);
 
-        productRepo.Add(product);
-        await unitOfWork.SaveChangesAsync(ct);
+            productRepo.Add(product);
+            await unitOfWork.CommitAsync(ct);
 
-        logger.LogInformation("Sản phẩm {ProductId} '{Name}' đã được tạo trong danh mục {CategoryId}",
-            product.Id.Value, product.Name.Value, product.CategoryId.Value);
+            logger.LogInformation("Sản phẩm {ProductId} '{Name}' đã được tạo trong danh mục {CategoryId}",
+                product.Id.Value, product.Name.Value, product.CategoryId.Value);
 
-        return Result<ProductDto>.Success(new ProductDto(
-            product.Id.Value,
-            product.Name.Value,
-            product.Price.Amount,
-            product.Price.Currency,
-            product.CategoryId.Value,
-            category.Name,
-            product.Description,
-            product.IsActive,
-            product.CreatedAt));
+            return Result<ProductDto>.Success(new ProductDto(
+                product.Id.Value,
+                product.Name.Value,
+                product.Price.Amount,
+                product.Price.Currency,
+                product.CategoryId.Value,
+                category.Name,
+                product.Description,
+                product.IsActive,
+                product.CreatedAt));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Tạo sản phẩm '{Name}' thất bại - đã rollback", request.Name);
+            await unitOfWork.RollbackAsync(ct);
+            throw;
+        }
     }
 }

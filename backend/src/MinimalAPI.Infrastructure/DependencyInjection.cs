@@ -16,13 +16,10 @@ public static class DependencyInjection
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")!;
 
-        // EF Core — retry on transient failures (network blip, DB restart)
+        // EF Core — KHÔNG bật EnableRetryOnFailure để dùng transaction
+        // tường minh (BeginTransaction/Commit/Rollback) theo kiểu try/catch.
         services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsqlOptions =>
-                npgsqlOptions.EnableRetryOnFailure(
-                    maxRetryCount: 3,
-                    maxRetryDelay: TimeSpan.FromSeconds(5),
-                    errorCodesToAdd: null)));
+            options.UseNpgsql(connectionString));
 
         // IApplicationDbContext — query side dùng LINQ (AsNoTracking)
         services.AddScoped<IApplicationDbContext>(sp =>
@@ -32,7 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IInventoryRepository, InventoryRepository>();
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IUnitOfWorkManager, UnitOfWorkManager>();
 
         return services;
     }

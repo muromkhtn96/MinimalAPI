@@ -9,7 +9,7 @@ namespace MinimalAPI.Application.Features.Products.UpdateProductActive;
 
 public sealed class UpdateProductActiveHandler(
     IProductRepository productRepo,
-    IUnitOfWork unitOfWork,
+    IUnitOfWorkManager unitOfWorkManager,
     ILogger<UpdateProductActiveHandler> logger)
     : IRequestHandler<UpdateProductActiveCommand, Result<ProductDto>>
 {
@@ -30,21 +30,31 @@ public sealed class UpdateProductActiveHandler(
             return Result<ProductDto>.Failure("Không thể kích hoạt sản phẩm. Đã có 10 sản phẩm đang hoạt động.");
         }
 
-        product.Activate();
-        await unitOfWork.SaveChangesAsync(ct);
+        await using var unitOfWork = await unitOfWorkManager.NewUnitOfWorkAsync(ct);
+        try
+        {
+            product.Activate();
+            await unitOfWork.CommitAsync(ct);
 
-        logger.LogInformation("Đã kích hoạt sản phẩm {ProductId} '{Name}'",
-                product.Id.Value, product.Name.Value);
+            logger.LogInformation("Đã kích hoạt sản phẩm {ProductId} '{Name}'",
+                    product.Id.Value, product.Name.Value);
 
-        return Result<ProductDto>.Success(new ProductDto(
-            product.Id.Value,
-            product.Name.Value,
-            product.Price.Amount,
-            product.Price.Currency,
-            product.CategoryId.Value,
-            product.Category.Name,
-            product.Description,
-            product.IsActive,
-            product.CreatedAt));
+            return Result<ProductDto>.Success(new ProductDto(
+                product.Id.Value,
+                product.Name.Value,
+                product.Price.Amount,
+                product.Price.Currency,
+                product.CategoryId.Value,
+                product.Category.Name,
+                product.Description,
+                product.IsActive,
+                product.CreatedAt));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Kích hoạt sản phẩm {ProductId} thất bại - đã rollback", request.Id);
+            await unitOfWork.RollbackAsync(ct);
+            throw;
+        }
     }
 }
