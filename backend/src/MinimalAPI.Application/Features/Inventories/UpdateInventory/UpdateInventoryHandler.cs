@@ -9,42 +9,37 @@ namespace MinimalAPI.Application.Features.Inventories.UpdateInventory;
 
 public sealed class UpdateInventoryHandler(
     IInventoryRepository inventoryRepo,
-    IUnitOfWork unitOfWork,
+    IUnitOfWorkManager unitOfWorkManager,
     ILogger<UpdateInventoryHandler> logger)
     : IRequestHandler<UpdateInventoryCommand, Result<InventoryDto>>
 {
-    public async Task<Result<InventoryDto>> Handle(UpdateInventoryCommand request, CancellationToken cancellationToken)
+    public async Task<Result<InventoryDto>> Handle(UpdateInventoryCommand request, CancellationToken ct)
     {
+        var inventory = await inventoryRepo.GetByIdAsync(new InventoryId(request.Id), ct);
+        if (inventory is null)
+        {
+            logger.LogInformation("Tồn kho không tồn tại. Id: {Id}", request.Id);
+            return Result<InventoryDto>.Failure("Không tìm thấy bản ghi tồn kho.");
+        }
+
+        await using var unitOfWork = await unitOfWorkManager.NewUnitOfWorkAsync(ct);
         try
         {
-            var inventory = await inventoryRepo.GetByIdAsync(new InventoryId(request.Id), cancellationToken);
-            if (inventory is null)
-            {
-                logger.LogInformation("Tồn kho không tồn tại. Id: {Id}", request.Id);
-                return Result<InventoryDto>.Failure("Không tìm thấy bản ghi tồn kho.");
-            }
-
             inventory.UpdateQuantity(request.Quantity);
-
-            await unitOfWork.SaveChangesAsync(cancellationToken);
+            await unitOfWork.CommitAsync(ct);
 
             logger.LogInformation("Cập nhật tồn kho thành công. Id: {Id}", request.Id);
 
-            var inventoryDto = new InventoryDto(
+            return Result<InventoryDto>.Success(new InventoryDto(
                 inventory.Id.Value,
                 inventory.ProductId.Value,
-                inventory.Quantity);
-
-            return Result<InventoryDto>.Success(inventoryDto);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
+                inventory.Quantity));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Lỗi khi cập nhật tồn kho. Id: {Id}", request.Id);
-            return Result<InventoryDto>.Failure("Đã xảy ra lỗi khi cập nhật tồn kho.");
+            logger.LogError(ex, "Cập nhật tồn kho thất bại - đã rollback. Id: {Id}", request.Id);
+            await unitOfWork.RollbackAsync(ct);
+            throw;
         }
     }
 }

@@ -11,7 +11,7 @@ namespace MinimalAPI.Application.Features.Categories.DeleteCategory;
 public sealed class DeleteCategoryHandler(
     ICategoryRepository categoryRepo,
     IApplicationDbContext db,
-    IUnitOfWork unitOfWork,
+    IUnitOfWorkManager unitOfWorkManager,
     ILogger<DeleteCategoryHandler> logger)
     : IRequestHandler<DeleteCategoryCommand, Result<CategoryDto>>
 {
@@ -34,16 +34,26 @@ public sealed class DeleteCategoryHandler(
             return Result<CategoryDto>.Failure($"Không thể xóa — còn {productCount} sản phẩm thuộc danh mục này.");
         }
 
-        categoryRepo.Remove(category);
-        await unitOfWork.SaveChangesAsync(ct);
+        await using var unitOfWork = await unitOfWorkManager.NewUnitOfWorkAsync(ct);
+        try
+        {
+            categoryRepo.Remove(category);
+            await unitOfWork.CommitAsync(ct);
 
-        logger.LogInformation("Đã xóa thành công danh mục {CategoryId} '{Name}'",
-                category.Id.Value, category.Name);
+            logger.LogInformation("Đã xóa thành công danh mục {CategoryId} '{Name}'",
+                    category.Id.Value, category.Name);
 
-        return Result<CategoryDto>.Success(new CategoryDto(
-            category.Id.Value,
-            category.Name,
-            category.Description,
-            category.CreatedAt));
+            return Result<CategoryDto>.Success(new CategoryDto(
+                category.Id.Value,
+                category.Name,
+                category.Description,
+                category.CreatedAt));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Xóa danh mục {CategoryId} thất bại - đã rollback", request.Id);
+            await unitOfWork.RollbackAsync(ct);
+            throw;
+        }
     }
 }

@@ -9,7 +9,7 @@ namespace MinimalAPI.Application.Features.Products.DeleteProduct;
 
 public sealed class DeleteProductHandler(
     IProductRepository productRepo,
-    IUnitOfWork unitOfWork,
+    IUnitOfWorkManager unitOfWorkManager,
     ILogger<DeleteProductHandler> logger)
     : IRequestHandler<DeleteProductCommand, Result<ProductDto>>
 {
@@ -22,22 +22,32 @@ public sealed class DeleteProductHandler(
             return Result<ProductDto>.Failure("Sản phẩm không tồn tại.");
         }
 
-        productRepo.Remove(product);
-        await unitOfWork.SaveChangesAsync(ct);
+        await using var unitOfWork = await unitOfWorkManager.NewUnitOfWorkAsync(ct);
+        try
+        {
+            productRepo.Remove(product);
+            await unitOfWork.CommitAsync(ct);
 
-        logger.LogInformation("Đã xóa sản phẩm {ProductId} '{Name}' - trạng thái trước đó: {Status}",
-            product.Id.Value, product.Name.Value,
-            product.IsActive ? "đang hoạt động" : "không hoạt động");
+            logger.LogInformation("Đã xóa sản phẩm {ProductId} '{Name}' - trạng thái trước đó: {Status}",
+                product.Id.Value, product.Name.Value,
+                product.IsActive ? "đang hoạt động" : "không hoạt động");
 
-        return Result<ProductDto>.Success(new ProductDto(
-            product.Id.Value,
-            product.Name.Value,
-            product.Price.Amount,
-            product.Price.Currency,
-            product.CategoryId.Value,
-            product.Category.Name,
-            product.Description,
-            product.IsActive,
-            product.CreatedAt));
+            return Result<ProductDto>.Success(new ProductDto(
+                product.Id.Value,
+                product.Name.Value,
+                product.Price.Amount,
+                product.Price.Currency,
+                product.CategoryId.Value,
+                product.Category.Name,
+                product.Description,
+                product.IsActive,
+                product.CreatedAt));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Xóa sản phẩm {ProductId} thất bại - đã rollback", request.Id);
+            await unitOfWork.RollbackAsync(ct);
+            throw;
+        }
     }
 }

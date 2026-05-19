@@ -6,8 +6,7 @@ namespace MinimalAPI.Application.Features.Inventories.GetInventories;
 
 public sealed record GetInvenoriesHandler(
     IInventoryRepository inventoryRepository,
-    IProductRepository productRepository,
-    IUnitOfWork unitOfWork
+    IProductRepository productRepository
 ) : IRequestHandler<GetInventoriesQuery, List<InventoryDto>>
 {
     public async Task<List<InventoryDto>> Handle(GetInventoriesQuery request, CancellationToken ct)

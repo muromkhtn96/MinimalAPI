@@ -5,17 +5,18 @@ using MinimalAPI.Domain.Interfaces;
 namespace MinimalAPI.Infrastructure.Persistence.Repositories;
 
 /// <summary>EF Core implementation của IProductRepository.</summary>
-public sealed class ProductRepository(AppDbContext db) : IProductRepository
+public sealed class ProductRepository(AppDbContext db)
+    : Repository<Product, ProductId>(db), IProductRepository
 {
     /// <inheritdoc />
     public async Task<int> CountAsync(string? search, CancellationToken ct = default) =>
-        await db.Products
+        await Set
             .Where(p => string.IsNullOrWhiteSpace(search) || p.Name.Value.ToLower().Contains(search.ToLower()))
             .CountAsync(ct);
 
     /// <inheritdoc />
     public async Task<List<Product>> GetPagedAsync(int page, int pageSize, string? search, CancellationToken ct = default) =>
-        await db.Products
+        await Set
             .Include(p => p.Category)
             .Where(p => string.IsNullOrWhiteSpace(search) || p.Name.Value.ToLower().Contains(search.ToLower()))
             .OrderByDescending(p => p.CreatedAt)
@@ -24,14 +25,14 @@ public sealed class ProductRepository(AppDbContext db) : IProductRepository
             .ToListAsync(ct);
 
     /// <inheritdoc />
-    public async Task<Product?> GetByIdAsync(ProductId id, CancellationToken ct = default) =>
-        await db.Products
+    public override async Task<Product?> GetByIdAsync(ProductId id, CancellationToken ct = default) =>
+        await Set
             .Include(p => p.Category)
             .FirstOrDefaultAsync(p => p.Id == id, ct);
 
     /// <inheritdoc />
     public async Task<List<Product>> GetByCategoryAsync(CategoryId categoryId, CancellationToken ct = default) =>
-        await db.Products
+        await Set
             .Include(p => p.Category)
             .Where(p => p.CategoryId == categoryId)
             .OrderByDescending(p => p.CreatedAt)
@@ -39,7 +40,7 @@ public sealed class ProductRepository(AppDbContext db) : IProductRepository
 
     /// <inheritdoc />
     public async Task<List<Product>> GetActiveProductsAsync(CancellationToken ct = default) =>
-        await db.Products
+        await Set
             .Include(p => p.Category)
             .Where(p => p.IsActive)
             .OrderByDescending(p => p.CreatedAt)
@@ -47,7 +48,7 @@ public sealed class ProductRepository(AppDbContext db) : IProductRepository
 
     /// <inheritdoc />
     public async Task<List<Product>> GetDeactiveProductsAsync(CancellationToken ct = default) =>
-        await db.Products
+        await Set
             .Include(p => p.Category)
             .Where(p => !p.IsActive)
             .OrderByDescending(p => p.CreatedAt)
@@ -55,11 +56,5 @@ public sealed class ProductRepository(AppDbContext db) : IProductRepository
 
     /// <inheritdoc />
     public async Task<bool> ExistsByNameAsync(string name, CancellationToken ct = default) =>
-        await db.Products.AnyAsync(p => p.Name.Value == name, ct);
-
-    /// <inheritdoc />
-    public void Add(Product product) => db.Products.Add(product);
-
-    /// <inheritdoc />
-    public void Remove(Product product) => db.Products.Remove(product);
+        await Set.AnyAsync(p => p.Name.Value == name, ct);
 }

@@ -9,7 +9,7 @@ namespace MinimalAPI.Application.Features.Products.UpdateProductDeactive;
 
 public sealed class UpdateProductDeactiveHandler(
     IProductRepository productRepository,
-    IUnitOfWork unitOfWork,
+    IUnitOfWorkManager unitOfWorkManager,
     ILogger<UpdateProductDeactiveHandler> logger)
     : IRequestHandler<UpdateProductDeactiveCommand, Result<ProductDto>>
 {
@@ -30,21 +30,31 @@ public sealed class UpdateProductDeactiveHandler(
             return Result<ProductDto>.Failure("Không thể tắt sản phẩm. Đã có 10 sản phẩm đang tắt hoạt động.");
         }
 
-        product.Deactivate();
-        await unitOfWork.SaveChangesAsync(ct);
+        await using var unitOfWork = await unitOfWorkManager.NewUnitOfWorkAsync(ct);
+        try
+        {
+            product.Deactivate();
+            await unitOfWork.CommitAsync(ct);
 
-        logger.LogInformation("Đã hủy kích hoạt sản phẩm {ProductId} '{Name}'",
-            product.Id.Value, product.Name.Value);
+            logger.LogInformation("Đã hủy kích hoạt sản phẩm {ProductId} '{Name}'",
+                product.Id.Value, product.Name.Value);
 
-        return Result<ProductDto>.Success(new ProductDto(
-            product.Id.Value,
-            product.Name.Value,
-            product.Price.Amount,
-            product.Price.Currency,
-            product.CategoryId.Value,
-            product.Category.Name,
-            product.Description,
-            product.IsActive,
-            product.CreatedAt));
+            return Result<ProductDto>.Success(new ProductDto(
+                product.Id.Value,
+                product.Name.Value,
+                product.Price.Amount,
+                product.Price.Currency,
+                product.CategoryId.Value,
+                product.Category.Name,
+                product.Description,
+                product.IsActive,
+                product.CreatedAt));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Hủy kích hoạt sản phẩm {ProductId} thất bại - đã rollback", request.Id);
+            await unitOfWork.RollbackAsync(ct);
+            throw;
+        }
     }
 }
