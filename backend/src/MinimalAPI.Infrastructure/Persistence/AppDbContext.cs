@@ -22,9 +22,16 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IMediat
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Category> Categories => Set<Category>();
 
+    public DbSet<Inventory> Inventories => Set<Inventory>();
+
+    // Counter cho ICodeGenerator — internal, không expose qua IApplicationDbContext
+    internal DbSet<CodeCounter> CodeCounters => Set<CodeCounter>();
+
     // IApplicationDbContext — expose IQueryable cho query handlers
     IQueryable<Product> IApplicationDbContext.Products => Products.AsNoTracking();
     IQueryable<Category> IApplicationDbContext.Categories => Categories.AsNoTracking();
+
+    IQueryable<Inventory> IApplicationDbContext.Inventories => Inventories.AsNoTracking();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -5,8 +5,13 @@ using MinimalAPI.Application.Features.Products.CreateProduct;
 using MinimalAPI.Application.Features.Products.DeleteProduct;
 using MinimalAPI.Application.Features.Products.DTOs;
 using MinimalAPI.Application.Features.Products.GetProduct;
+using MinimalAPI.Application.Features.Products.GetProductActive;
+using MinimalAPI.Application.Features.Products.GetProductsByCategory;
 using MinimalAPI.Application.Features.Products.GetProducts;
 using MinimalAPI.Application.Features.Products.UpdateProduct;
+using MinimalAPI.Application.Features.Products.UpdateProductActive;
+using MinimalAPI.Application.Features.Products.GetProductDeactive;
+using MinimalAPI.Application.Features.Products.UpdateProductDeactive;
 
 namespace MinimalAPI.Api.Endpoints;
 
@@ -48,12 +53,12 @@ public static class ProductEndpoints
         {
             var result = await sender.Send(command);
             return result.IsSuccess
-                ? TypedResults.Created($"/api/products/{result.Value}", result.Value)
+                ? TypedResults.Created($"/api/products/{result.Value!.Id}", result.Value)
                 : TypedResults.BadRequest(new { error = result.Error });
         })
         .WithName("CreateProduct")
         .WithSummary("Tạo sản phẩm mới")
-        .Produces<Guid>(StatusCodes.Status201Created)
+        .Produces<ProductDto>(StatusCodes.Status201Created)
         .Produces<ProblemDetails>(StatusCodes.Status400BadRequest);
 
         group.MapPut("/{id:guid}", async Task<IResult> (Guid id, UpdateProductCommand command, ISender sender) =>
@@ -68,7 +73,7 @@ public static class ProductEndpoints
         })
         .WithName("UpdateProduct")
         .WithSummary("Cập nhật sản phẩm")
-        .Produces<Guid>()
+        .Produces<ProductDto>()
         .Produces(StatusCodes.Status404NotFound)
         .Produces<ProblemDetails>(StatusCodes.Status400BadRequest);
 
@@ -81,7 +86,61 @@ public static class ProductEndpoints
         })
         .WithName("DeleteProduct")
         .WithSummary("Xóa sản phẩm")
-        .Produces<Guid>()
+        .Produces<ProductDto>()
+        .Produces(StatusCodes.Status404NotFound);
+
+        group.MapGet("/by-category/{categoryId:guid}", async Task<IResult> (Guid categoryId, ISender sender) =>
+        {
+            var result = await sender.Send(new GetProductsByCategoryQuery(categoryId));
+            return result.IsSuccess
+                ? TypedResults.Ok(result.Value)
+                : TypedResults.NotFound(new { error = result.Error });
+        })
+        .WithName("GetProductsByCategory")
+        .WithSummary("Lấy danh sách sản phẩm theo danh mục")
+        .Produces<List<ProductDto>>()
+        .Produces(StatusCodes.Status404NotFound);
+
+        group.MapGet("/active", async Task<IResult> (ISender sender) =>
+        {
+            var result = await sender.Send(new GetProductActiveQuery());
+            return TypedResults.Ok(result.Value);
+        })
+        .WithName("GetProductActive")
+        .WithSummary("Lấy danh sách sản phẩm đang hoạt động")
+        .Produces<List<ProductDto>>();
+
+        group.MapGet("/deactive", async Task<IResult> (ISender sender) =>
+        {
+            var result = await sender.Send(new GetProductDeactiveQuery());
+            return TypedResults.Ok(result.Value);
+        })
+        .WithName("GetProductDeactive")
+        .WithSummary("Lấy danh sách sản phẩm không hoạt động")
+        .Produces<List<ProductDto>>();
+
+        group.MapPut("/{id:guid}/active", async Task<IResult> (Guid id, ISender sender) =>
+        {
+            var result = await sender.Send(new UpdateProductActiveCommand(id));
+            return result.IsSuccess
+                ? TypedResults.Ok(result.Value)
+                : TypedResults.NotFound(new { error = result.Error });
+        })
+        .WithName("ActivateProduct")
+        .WithSummary("Bật trạng thái hoạt động của sản phẩm")
+        .Produces<ProductDto>()
+        .Produces(StatusCodes.Status404NotFound);
+
+        group.MapPut("/{id:guid}/deactive", async Task<IResult> (Guid id, ISender sender) =>
+        {
+            var result = await sender.Send(new UpdateProductDeactiveCommand(id));
+            return result.IsSuccess
+                ? TypedResults.Ok(result.Value)
+                : TypedResults.NotFound(new { error = result.Error });
+        })
+        .WithName("DeactivateProduct")
+        .WithSummary("Tắt trạng thái hoạt động của sản phẩm")
+        .Produces<ProductDto>()
         .Produces(StatusCodes.Status404NotFound);
 
         return app;

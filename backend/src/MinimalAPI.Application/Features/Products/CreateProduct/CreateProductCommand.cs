@@ -1,6 +1,6 @@
 using MediatR;
 using MinimalAPI.Application.Abstractions;
-
+using MinimalAPI.Application.Features.Products.DTOs;
 namespace MinimalAPI.Application.Features.Products.CreateProduct;
 
 /// <summary>Command tạo sản phẩm mới.</summary>
@@ -14,4 +14,4 @@ public record CreateProductCommand(
     /// <summary>Mã danh mục.</summary>
     Guid CategoryId,
     /// <summary>Mô tả sản phẩm (không bắt buộc).</summary>
-    string? Description) : IRequest<Result<Guid>>;
+    string? Description) : IRequest<Result<ProductDto>>;

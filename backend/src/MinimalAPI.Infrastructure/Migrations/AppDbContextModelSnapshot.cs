@@ -18,7 +18,7 @@ namespace MinimalAPI.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.7")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -49,6 +49,36 @@ namespace MinimalAPI.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("categories", (string)null);
+                });
+
+            modelBuilder.Entity("MinimalAPI.Domain.Entities.Inventory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<long>("Quantity")
+                        .HasColumnType("bigint")
+                        .HasColumnName("quantity");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId")
+                        .IsUnique();
+
+                    b.ToTable("inventories", (string)null);
                 });
 
             modelBuilder.Entity("MinimalAPI.Domain.Entities.Product", b =>
@@ -108,6 +138,33 @@ namespace MinimalAPI.Infrastructure.Migrations
                     b.HasIndex("CategoryId");
 
                     b.ToTable("products", (string)null);
+                });
+
+            modelBuilder.Entity("MinimalAPI.Infrastructure.Persistence.CodeCounter", b =>
+                {
+                    b.Property<string>("Prefix")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("prefix");
+
+                    b.Property<long>("CurrentValue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("current_value");
+
+                    b.HasKey("Prefix");
+
+                    b.ToTable("code_counters", (string)null);
+                });
+
+            modelBuilder.Entity("MinimalAPI.Domain.Entities.Inventory", b =>
+                {
+                    b.HasOne("MinimalAPI.Domain.Entities.Product", "Product")
+                        .WithOne()
+                        .HasForeignKey("MinimalAPI.Domain.Entities.Inventory", "ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("MinimalAPI.Domain.Entities.Product", b =>
