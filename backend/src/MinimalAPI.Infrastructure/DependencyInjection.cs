@@ -5,6 +5,7 @@ using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Domain.Interfaces;
 using MinimalAPI.Infrastructure.Persistence;
 using MinimalAPI.Infrastructure.Persistence.Repositories;
+using MinimalAPI.Infrastructure.Services;
 
 namespace MinimalAPI.Infrastructure;
 
@@ -30,6 +31,9 @@ public static class DependencyInjection
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IInventoryRepository, InventoryRepository>();
         services.AddScoped<IUnitOfWorkManager, UnitOfWorkManager>();
+
+        // Helper sinh mã code tuần tự theo prefix
+        services.AddScoped<ICodeGenerator, CodeGenerator>();
 
         return services;
     }
