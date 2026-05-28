@@ -1,0 +1,5 @@
+$kind: http-request
+name: Get Inventory by ProductId
+url: "{{baseUrl}}/api/inventories/by-product/8deaa16a-7a36-40a5-856f-8e04edeeb14b"
+method: GET
+order: 4502822458904600

@@ -1,0 +1,35 @@
+$kind: http-request
+name: Create Customer
+url: "{{baseUrl}}/api/customers?page=1&pageSize=10"
+method: POST
+queryParams:
+  page: "1"
+  pageSize: "10"
+body:
+  type: json
+  content: "{\r
+
+    \  \"fullName\": \"G Dragon\",\r
+
+    \  \"email\": \"gdxiix@gmail.com\",\r
+
+    \  \"phone\": \"0787763906\",\r
+
+    \  \"gender\": 0,\r
+
+    \  \"dateOfBirth\": \"2000-09-11\",\r
+
+    \  \"addressStreet\": \"37/5 ấp Tân Tiến\",\r
+
+    \  \"addressWard\": \"xã Xuân Thới Đông\",\r
+
+    \  \"addressDistrict\": \"huyện Hóc Môn\",\r
+
+    \  \"addressCity\": \"TP. Hồ Chí Minh\",\r
+
+    \  \"addressCountry\": \"Việt Nam\",\r
+
+    \  \"note\": \"VIP\"\r
+
+    }"
+order: 1779762152571

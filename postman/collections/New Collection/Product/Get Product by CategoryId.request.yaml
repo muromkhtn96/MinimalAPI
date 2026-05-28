@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/products/by-category/112324c3-cae8-4e5d-b7ac-beaa3a1735b6"
+method: GET
+order: 4367830114312940

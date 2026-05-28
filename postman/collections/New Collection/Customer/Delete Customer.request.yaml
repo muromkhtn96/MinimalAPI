@@ -1,0 +1,5 @@
+$kind: http-request
+name: Delete Customer
+url: "{{baseUrl}}/api/customers/529a4632-9a23-49bc-b141-ba71c6f8e0af"
+method: DELETE
+order: 4503592513688365

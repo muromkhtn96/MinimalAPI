@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/categories"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"name\": \"string\",\r
+
+    \  \"description\": \"string\"\r
+
+    }"
+order: 1691187112247128

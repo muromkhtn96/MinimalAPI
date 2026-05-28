@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Customers
+url: "{{baseUrl}}/api/customers"
+method: GET
+body:
+  type: json
+  content: ""
+order: 2835538390578773

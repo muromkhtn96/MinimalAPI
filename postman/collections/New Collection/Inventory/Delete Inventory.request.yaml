@@ -1,0 +1,5 @@
+$kind: http-request
+name: Delete Inventory
+url: "{{baseUrl}}/api/invetories/c4e40523-85c9-40ca-83a6-e953b4d3b12f"
+method: DELETE
+order: 4502681912621387

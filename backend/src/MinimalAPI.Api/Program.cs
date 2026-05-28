@@ -62,7 +62,7 @@ builder.Services.AddCors(options =>
     {
         if (builder.Environment.IsDevelopment())
         {
-            policy.WithOrigins("http://localhost:4200")
+            policy.WithOrigins("http://localhost:4200", "http://localhost:8080", "http://localhost")
                 .AllowAnyHeader()
                 .AllowAnyMethod();
         }
@@ -125,6 +125,7 @@ if (app.Environment.IsDevelopment())
 app.MapProductEndpoints();
 app.MapCategoryEndpoints();
 app.MapInventoryEndpoints();
+app.MapCustomerEndpoints();
 app.MapHealthChecks("/health");
 
 using (var scope = app.Services.CreateScope())

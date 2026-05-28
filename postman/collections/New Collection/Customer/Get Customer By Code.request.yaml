@@ -1,0 +1,5 @@
+$kind: http-request
+name: Get Customer By Code
+url: "{{baseUrl}}/api/customers/code/KH00004"
+method: GET
+order: 4502527521445794
