@@ -1,0 +1,7 @@
+$kind: http-request
+url: http://localhost:5000/api/categories?page=1&pageSize=20
+method: GET
+queryParams:
+  page: "1"
+  pageSize: "20"
+order: 1779777421539

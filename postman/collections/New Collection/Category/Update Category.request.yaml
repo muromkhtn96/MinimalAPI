@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/api/categories/21df1a76-0994-4a9a-ad2a-560c79832646"
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \  \"id\": \"21df1a76-0994-4a9a-ad2a-560c79832646\",\r
+
+    \  \"name\": \"string1\",\r
+
+    \  \"description\": \"string\"\r
+
+    }"
+order: 3822188347208364

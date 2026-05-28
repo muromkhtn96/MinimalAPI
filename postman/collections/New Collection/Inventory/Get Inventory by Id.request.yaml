@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{baseUrl}}/api/inventories/c4e40523-85c9-40ca-83a6-e953b4d3b12f"
+method: GET
+body:
+  type: json
+  content: ""
+order: 4502147637490982

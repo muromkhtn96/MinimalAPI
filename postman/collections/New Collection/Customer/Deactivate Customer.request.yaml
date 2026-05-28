@@ -1,0 +1,5 @@
+$kind: http-request
+name: Deactivate Customer
+url: "{{baseUrl}}/api/customers/e08e6fb3-a088-4cc1-8e98-5f2565eb9d81/deactive"
+method: PATCH
+order: 4503589415311402

@@ -1,0 +1,34 @@
+$kind: http-request
+name: Update Customer
+url: "{{baseUrl}}/api/customers/e08e6fb3-a088-4cc1-8e98-5f2565eb9d81"
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \  \"id\": \"e08e6fb3-a088-4cc1-8e98-5f2565eb9d81\",\r
+
+    \  \"fullName\": \"Phạm Gia Bảo 1\",\r
+
+    \  \"email\": \"gb2kxiix@gmail.com\",\r
+
+    \  \"phone\": \"0787763901\",\r
+
+    \  \"gender\": 0,\r
+
+    \  \"dateOfBirth\": \"2000-09-11\",\r
+
+    \  \"addressStreet\": \"37/5 ấp Tân Tiến\",\r
+
+    \  \"addressWard\": \"xã Xuân Thới Đông\",\r
+
+    \  \"addressDistrict\": \"huyện Hóc Môn\",\r
+
+    \  \"addressCity\": \"TP. Hồ Chí Minh\",\r
+
+    \  \"addressCountry\": \"Việt Nam\",\r
+
+    \  \"note\": \"VIP\"\r
+
+    }"
+order: 4502530658477576

@@ -38,9 +38,10 @@ public sealed class CodeGenerator(AppDbContext db) : ICodeGenerator
 
         var prefixParam = new NpgsqlParameter("@prefix", normalizedPrefix);
 
-        var next = await db.Database
+        var nextList = await db.Database
             .SqlQueryRaw<long>(sql, prefixParam)
-            .FirstAsync(ct);
+            .ToListAsync(ct);
+        var next = nextList.First();
 
         return $"{normalizedPrefix}{next.ToString().PadLeft(padLength, '0')}";
     }

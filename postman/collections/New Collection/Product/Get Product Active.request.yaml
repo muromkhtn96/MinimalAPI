@@ -1,0 +1,5 @@
+$kind: http-request
+name: Get Product Active
+url: "{{baseUrl}}/api/products/active"
+method: GET
+order: 4402788362107301

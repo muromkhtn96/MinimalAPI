@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/inventories/c4e40523-85c9-40ca-83a6-e953b4d3b12f"
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \  \"id\": \"c4e40523-85c9-40ca-83a6-e953b4d3b12f\",\r
+
+    \  \"quantity\": 10\r
+
+    }"
+order: 4315756630776532
