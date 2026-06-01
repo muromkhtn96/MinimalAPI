@@ -4,6 +4,8 @@ namespace MinimalAPI.Application.Features.Products.DTOs;
 public record ProductDto(
     /// <summary>Mã sản phẩm.</summary>
     Guid Id,
+    /// <summary>Code sản phẩm.</summary>
+    string Code,
     /// <summary>Tên sản phẩm.</summary>
     string Name,
     /// <summary>Giá sản phẩm.</summary>

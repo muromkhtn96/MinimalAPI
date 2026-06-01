@@ -4,6 +4,7 @@ namespace MinimalAPI.Application.Features.Products.UpdateProduct;
 
 public class UpdateProductValidator : AbstractValidator<UpdateProductCommand>
 {
+    /// <summary> Validator cho lệnh cập nhật sản phẩm. </summary>
     public UpdateProductValidator()
     {
         RuleFor(x => x.Id)

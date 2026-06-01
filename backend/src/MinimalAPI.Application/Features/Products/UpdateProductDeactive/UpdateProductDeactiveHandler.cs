@@ -13,6 +13,12 @@ public sealed class UpdateProductDeactiveHandler(
     ILogger<UpdateProductDeactiveHandler> logger)
     : IRequestHandler<UpdateProductDeactiveCommand, Result<ProductDto>>
 {
+    /// <summary>
+    /// Xử lý lệnh cập nhật trạng thái không hoạt động của sản phẩm.
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="ct"></param>
+    /// <returns></returns>
     public async Task<Result<ProductDto>> Handle(UpdateProductDeactiveCommand request, CancellationToken ct)
     {
         var product = await productRepository.GetByIdAsync(new ProductId(request.Id), ct);
@@ -41,6 +47,7 @@ public sealed class UpdateProductDeactiveHandler(
 
             return Result<ProductDto>.Success(new ProductDto(
                 product.Id.Value,
+                product.Code,
                 product.Name.Value,
                 product.Price.Amount,
                 product.Price.Currency,

@@ -9,15 +9,14 @@ public sealed record GetInventoryByProductHandler(
     IProductRepository productRepository
 ) : IRequestHandler<GetInventoryByProductQuery, List<InventoryDto>>
 {
+    /// <summary>
+    /// Xử lý lệnh lấy thông tin tồn kho theo mã sản phẩm
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="ct"></param>
+    /// <returns></returns>
     public async Task<List<InventoryDto>> Handle(GetInventoryByProductQuery request, CancellationToken ct)
     {
-        var product = await productRepository.GetByIdAsync(request.Id, ct);
-
-        if (product is null)
-        {
-            return new List<InventoryDto>();
-        }
-
         var inventory = await inventoryRepository.GetByProductIdAsync(request.Id, ct);
 
         if (inventory is null)
