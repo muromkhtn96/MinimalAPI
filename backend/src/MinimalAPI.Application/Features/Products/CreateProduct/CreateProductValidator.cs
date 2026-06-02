@@ -4,6 +4,9 @@ namespace MinimalAPI.Application.Features.Products.CreateProduct;
 
 public class CreateProductValidator : AbstractValidator<CreateProductCommand>
 {
+    /// <summary>
+    /// Khởi tạo validator cho lệnh tạo sản phẩm mới
+    /// </summary>
     public CreateProductValidator()
     {
         RuleFor(x => x.Name)

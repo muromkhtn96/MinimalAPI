@@ -25,30 +25,35 @@ public static class SeedData
         var products = new[]
         {
             Product.Create(
+                "SP00001",
                 ProductName.Create("Laptop Dell XPS 13"),
                 Money.VND(25000000),
                 electronics.Id,
                 "Laptop cao cấp, màn hình 13 inch"
             ),
             Product.Create(
+                "SP00002",
                 ProductName.Create("iPhone 15 Pro"),
                 Money.VND(30000000),
                 electronics.Id,
                 "Điện thoại thông minh Apple mới nhất"
             ),
             Product.Create(
+                "SP00003",
                 ProductName.Create("Áo thun nam"),
                 Money.VND(150000),
                 clothing.Id,
                 "Áo thun cotton 100%"
             ),
             Product.Create(
+                "SP00004",
                 ProductName.Create("Giày thể thao Nike"),
                 Money.VND(2500000),
                 clothing.Id,
                 "Giày chạy bộ chuyên nghiệp"
             ),
             Product.Create(
+                "SP00005",
                 ProductName.Create("Clean Code"),
                 Money.VND(350000),
                 books.Id,
@@ -56,7 +61,11 @@ public static class SeedData
             )
         };
 
+        // Khởi tạo bộ đếm
+        var spCounter = new CodeCounter { Prefix = "SP", CurrentValue = 5 };
+        
+        context.CodeCounters.Add(spCounter);
         context.Products.AddRange(products);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync();   
     }
 }

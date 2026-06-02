@@ -4,6 +4,9 @@ namespace MinimalAPI.Application.Features.Inventories.CreateInventory;
 
 public class CreateInventoryValidator : AbstractValidator<CreateInventoryCommand>
 {
+    /// <summary>
+    /// Khởi tạo validator cho lệnh tạo tồn kho mới
+    /// </summary>
     public CreateInventoryValidator()
     {
         RuleFor(x => x.Id)

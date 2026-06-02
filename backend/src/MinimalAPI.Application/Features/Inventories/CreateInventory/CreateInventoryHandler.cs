@@ -14,6 +14,12 @@ public sealed class CreateInventoryHandler(
     ILogger<CreateInventoryHandler> logger)
     : IRequestHandler<CreateInventoryCommand, Result<InventoryDto>>
 {
+    /// <summary>
+    /// Xử lý lệnh tạo tồn kho mới
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="ct"></param>
+    /// <returns></returns>
     public async Task<Result<InventoryDto>> Handle(
         CreateInventoryCommand request,
         CancellationToken ct)

@@ -13,6 +13,12 @@ public sealed class DeleteProductHandler(
     ILogger<DeleteProductHandler> logger)
     : IRequestHandler<DeleteProductCommand, Result<ProductDto>>
 {
+    /// <summary>
+    /// Xử lý lệnh xóa sản phẩm
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="ct"></param>
+    /// <returns></returns>
     public async Task<Result<ProductDto>> Handle(DeleteProductCommand request, CancellationToken ct)
     {
         var product = await productRepo.GetByIdAsync(new ProductId(request.Id), ct);
@@ -34,6 +40,7 @@ public sealed class DeleteProductHandler(
 
             return Result<ProductDto>.Success(new ProductDto(
                 product.Id.Value,
+                product.Code,
                 product.Name.Value,
                 product.Price.Amount,
                 product.Price.Currency,

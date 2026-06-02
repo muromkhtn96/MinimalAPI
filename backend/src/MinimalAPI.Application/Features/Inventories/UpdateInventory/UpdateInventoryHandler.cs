@@ -13,6 +13,12 @@ public sealed class UpdateInventoryHandler(
     ILogger<UpdateInventoryHandler> logger)
     : IRequestHandler<UpdateInventoryCommand, Result<InventoryDto>>
 {
+    /// <summary>
+    /// Xử lý lệnh cập nhật thông tin tồn kho
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="ct"></param>
+    /// <returns></returns>
     public async Task<Result<InventoryDto>> Handle(UpdateInventoryCommand request, CancellationToken ct)
     {
         var inventory = await inventoryRepo.GetByIdAsync(new InventoryId(request.Id), ct);

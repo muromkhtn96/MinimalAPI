@@ -10,7 +10,21 @@ namespace MinimalAPI.Domain.Entities;
 /// </summary>
 public sealed class Product : AggregateRoot<ProductId>
 {
+    /// <summary>
+    /// Mã code
+    /// </summary> <summary>
+    /// </summary>
+    /// <value></value>
+    public string Code { get; private set; } = default!;
+    /// <summary>
+    /// Lấy tên sản phẩm
+    /// </summary>
+    /// <value></value>
     public ProductName Name { get; private set; } = default!;
+    /// <summary>
+    /// Lấy giá tiền
+    /// </summary>
+    /// <value></value>
     public Money Price { get; private set; } = default!;
     public CategoryId CategoryId { get; private set; }
     public Category Category { get; private set; } = default!;
@@ -23,6 +37,7 @@ public sealed class Product : AggregateRoot<ProductId>
     private Product() { }
 
     public static Product Create(
+        string code,
         ProductName name,
         Money price,
         CategoryId categoryId,
@@ -31,6 +46,7 @@ public sealed class Product : AggregateRoot<ProductId>
         var product = new Product
         {
             Id = ProductId.New(),
+            Code = code,
             Name = name,
             Price = price,
             CategoryId = categoryId,
@@ -44,7 +60,10 @@ public sealed class Product : AggregateRoot<ProductId>
         return product;
     }
 
-    public void UpdateInfo(ProductName name, CategoryId categoryId, string? description)
+    public void UpdateInfo(
+        ProductName name, 
+        CategoryId categoryId, 
+        string? description)
     {
         Name = name;
         CategoryId = categoryId;

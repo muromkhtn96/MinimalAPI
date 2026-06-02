@@ -13,6 +13,12 @@ public sealed class UpdateProductActiveHandler(
     ILogger<UpdateProductActiveHandler> logger)
     : IRequestHandler<UpdateProductActiveCommand, Result<ProductDto>>
 {
+    /// <summary>
+    /// Xử lý lệnh cập nhật trạng thái hoạt động của sản phẩm.
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="ct"></param>
+    /// <returns></returns>
     public async Task<Result<ProductDto>> Handle(UpdateProductActiveCommand request, CancellationToken ct)
     {
         var product = await productRepo.GetByIdAsync(new ProductId(request.Id), ct);
@@ -41,6 +47,7 @@ public sealed class UpdateProductActiveHandler(
 
             return Result<ProductDto>.Success(new ProductDto(
                 product.Id.Value,
+                product.Code,
                 product.Name.Value,
                 product.Price.Amount,
                 product.Price.Currency,

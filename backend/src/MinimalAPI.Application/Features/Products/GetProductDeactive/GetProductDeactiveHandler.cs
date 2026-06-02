@@ -8,6 +8,12 @@ namespace MinimalAPI.Application.Features.Products.GetProductDeactive;
 
 public sealed class GetProductDeactiveHandler(IProductRepository productRepository) : IRequestHandler<GetProductDeactiveQuery, Result<List<ProductDto>>>
 {
+    /// <summary>
+    /// Xử lý truy vấn lấy danh sách sản phẩm không hoạt động.
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="ct"></param>
+    /// <returns></returns>
     public async Task<Result<List<ProductDto>>> Handle(GetProductDeactiveQuery request, CancellationToken ct)
     {
         var products = await productRepository.GetDeactiveProductsAsync(ct);
@@ -15,6 +21,7 @@ public sealed class GetProductDeactiveHandler(IProductRepository productReposito
         var dtos = products
             .Select(p => new ProductDto(
                 p.Id.Value,
+                p.Code,
                 p.Name.Value,
                 p.Price.Amount,
                 p.Price.Currency,

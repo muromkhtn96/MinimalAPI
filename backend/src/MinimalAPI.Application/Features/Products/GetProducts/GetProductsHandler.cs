@@ -8,6 +8,12 @@ namespace MinimalAPI.Application.Features.Products.GetProducts;
 public sealed class GetProductsHandler(IProductRepository productRepository)
     : IRequestHandler<GetProductsQuery, PagedResult<ProductDto>>
 {
+    /// <summary>
+    /// Xử lý truy vấn lấy danh sách sản phẩm.
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="ct"></param>
+    /// <returns></returns>
     public async Task<PagedResult<ProductDto>> Handle(GetProductsQuery request, CancellationToken ct)
     {
         var totalCount = await productRepository.CountAsync(request.Search, ct);
@@ -16,6 +22,7 @@ public sealed class GetProductsHandler(IProductRepository productRepository)
         var items = products
             .Select(p => new ProductDto(
                 p.Id.Value,
+                p.Code,
                 p.Name.Value,
                 p.Price.Amount,
                 p.Price.Currency,
