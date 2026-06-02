@@ -1,0 +1,5 @@
+$kind: http-request
+name: Update Product Active
+url: "{{baseUrl}}/api/products/ad5213fc-0103-4265-8abc-af7a7d67a303/active"
+method: PUT
+order: 4497988386935880

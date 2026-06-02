@@ -1,0 +1,22 @@
+$kind: http-request
+name: Update Product
+url: "{{baseUrl}}/api/products/ad5213fc-0103-4265-8abc-af7a7d67a303"
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \  \"id\": \"ad5213fc-0103-4265-8abc-af7a7d67a303\",\r
+
+    \  \"name\": \"string\",\r
+
+    \  \"price\": 20000,\r
+
+    \  \"currency\": \"VND\",\r
+
+    \  \"categoryId\": \"521f056f-765c-4fbc-8a52-887f4c4cb548\",\r
+
+    \  \"description\": \"string\"\r
+
+    }"
+order: 3836146194610559

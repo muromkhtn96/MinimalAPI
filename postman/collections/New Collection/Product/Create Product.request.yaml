@@ -1,0 +1,20 @@
+$kind: http-request
+name: Create Product
+url: "{{baseUrl}}/api/products"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"name\": \"string\",\r
+
+    \  \"price\": 10000,\r
+
+    \  \"currency\": \"VND\",\r
+
+    \  \"categoryId\": \"521f056f-765c-4fbc-8a52-887f4c4cb548\",\r
+
+    \  \"description\": \"string\"\r
+
+    }"
+order: 3083268777606614

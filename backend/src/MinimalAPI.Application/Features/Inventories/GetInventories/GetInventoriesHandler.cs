@@ -4,30 +4,25 @@ using MinimalAPI.Domain.Interfaces;
 
 namespace MinimalAPI.Application.Features.Inventories.GetInventories;
 
-public sealed record GetInvenoriesHandler(
+public sealed record GetInventoriesHandler(
     IInventoryRepository inventoryRepository,
     IProductRepository productRepository
 ) : IRequestHandler<GetInventoriesQuery, List<InventoryDto>>
 {
+    /// <summary>
+    /// Xử lý lệnh lấy danh sách tồn kho
+    /// </summary>
+    /// <param name="request"></param>
+    /// <param name="ct"></param>
+    /// <returns></returns>
     public async Task<List<InventoryDto>> Handle(GetInventoriesQuery request, CancellationToken ct)
     {
         var inventories = await inventoryRepository.GetAllAsync(ct);
 
-        var inventoryDtos = new List<InventoryDto>();
-
-        foreach (var inventory in inventories)
-        {
-            var product = await productRepository.GetByIdAsync(inventory.ProductId, ct);
-            if (product is not null)
-            {
-                inventoryDtos.Add(new InventoryDto(
-                    inventory.Id.Value,
-                    inventory.ProductId.Value,
-                    inventory.Quantity
-                ));
-            }
-        }
-
-        return inventoryDtos;
+        return inventories.Select(inventory => new InventoryDto(
+            inventory.Id.Value,
+            inventory.ProductId.Value,
+            inventory.Quantity
+        )).ToList();
     }
 }

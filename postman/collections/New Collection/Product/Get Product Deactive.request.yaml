@@ -1,0 +1,5 @@
+$kind: http-request
+name: Get Product Deactive
+url: "{{baseUrl}}/api/products/deactive"
+method: GET
+order: 4496514359642663

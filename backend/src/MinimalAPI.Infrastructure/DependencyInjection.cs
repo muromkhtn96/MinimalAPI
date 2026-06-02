@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IInventoryRepository, InventoryRepository>();
+        services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<IUnitOfWorkManager, UnitOfWorkManager>();
 
         // Helper sinh mã code tuần tự theo prefix

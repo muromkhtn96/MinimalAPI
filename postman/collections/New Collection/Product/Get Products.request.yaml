@@ -1,0 +1,8 @@
+$kind: http-request
+url: "{{baseUrl}}/api/products?page=1&pageSize=10"
+method: GET
+queryParams:
+  page: "1"
+  pageSize: "10"
+examples: .resources/Get Products.resources/examples
+order: 1779778320113

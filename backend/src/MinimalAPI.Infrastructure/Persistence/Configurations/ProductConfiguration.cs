@@ -18,6 +18,14 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasColumnName("id")
             .HasConversion(id => id.Value, value => new ProductId(value));
 
+        // Code property
+        builder.Property(p => p.Code)
+            .HasColumnName("code")
+            .HasMaxLength(20)
+            .IsRequired();
+
+        builder.HasIndex(p => p.Code).IsUnique();
+
         // ProductName — ComplexProperty (Value Object owned)
         builder.ComplexProperty(p => p.Name, nameBuilder =>
         {

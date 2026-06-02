@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/inventories"
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"id\": \"8deaa16a-7a36-40a5-856f-8e04edeeb14b\",\r
+
+    \  \"quantity\": 110\r
+
+    }"
+order: 2901946992873584
