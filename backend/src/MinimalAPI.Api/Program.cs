@@ -126,6 +126,7 @@ app.MapProductEndpoints();
 app.MapCategoryEndpoints();
 app.MapInventoryEndpoints();
 app.MapCustomerEndpoints();
+app.MapOrderEndpoints();
 app.MapHealthChecks("/health");
 
 using (var scope = app.Services.CreateScope())

@@ -1,0 +1,18 @@
+$kind: http-request
+name: Create Order
+url: "{{baseUrl}}/api/orders"
+method: POST
+body:
+  type: json
+  content: |-
+    {
+      "customerId": "1c9d14ab-862a-4537-b387-1c94461c00cc",
+      "note": "Giao hàng giờ hành chính",
+      "items": [
+        {
+          "productId": "a55faf4b-d135-4561-8427-5a3b56affe28",
+          "quantity": 1
+        }
+      ]
+    }
+order: 1000

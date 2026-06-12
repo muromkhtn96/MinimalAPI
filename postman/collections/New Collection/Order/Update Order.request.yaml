@@ -1,0 +1,28 @@
+$kind: http-request
+name: Update Order
+url: "{{baseUrl}}/api/orders/a3dc174f-4401-4e3f-91c6-58761d4139fb"
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \  \"orderId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\r
+
+    \  \"address\": \"string\",\r
+
+    \  \"note\": \"string\",\r
+
+    \  \"details\": [\r
+
+    \    {\r
+
+    \      \"productId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\r
+
+    \      \"quantity\": 0\r
+
+    \    }\r
+
+    \  ]\r
+
+    }"
+order: 7000

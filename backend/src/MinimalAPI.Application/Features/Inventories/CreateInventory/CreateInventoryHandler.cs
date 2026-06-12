@@ -24,19 +24,19 @@ public sealed class CreateInventoryHandler(
         CreateInventoryCommand request,
         CancellationToken ct)
     {
-        var productId = new ProductId(request.Id);
+        var productId = new ProductId(request.ProductId);
 
         var product = await productRepository.GetByIdAsync(productId, ct);
         if (product is null)
         {
-            logger.LogWarning("Sản phẩm không tồn tại. Id: {ProductId}", request.Id);
+            logger.LogWarning("Sản phẩm không tồn tại. Id: {ProductId}", request.ProductId);
             return Result<InventoryDto>.Failure("Sản phẩm không tồn tại.");
         }
 
         var exists = await inventoryRepository.ExistsByProductIdAsync(productId, ct);
         if (exists)
         {
-            logger.LogWarning("Tồn kho của sản phẩm này đã tồn tại. ProductId: {ProductId}", request.Id);
+            logger.LogWarning("Tồn kho của sản phẩm này đã tồn tại. ProductId: {ProductId}", request.ProductId);
             return Result<InventoryDto>.Failure("Tồn kho của sản phẩm này đã tồn tại.");
         }
 
@@ -48,7 +48,7 @@ public sealed class CreateInventoryHandler(
             inventoryRepository.Add(inventory);
             await unitOfWork.CommitAsync(ct);
 
-            logger.LogInformation("Tạo mới tồn kho thành công. ProductId: {ProductId}", request.Id);
+            logger.LogInformation("Tạo mới tồn kho thành công. ProductId: {ProductId}", request.ProductId);
 
             return Result<InventoryDto>.Success(new InventoryDto(
                 inventory.Id.Value,
@@ -57,7 +57,7 @@ public sealed class CreateInventoryHandler(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Tạo tồn kho thất bại - đã rollback. ProductId: {ProductId}", request.Id);
+            logger.LogError(ex, "Tạo tồn kho thất bại - đã rollback. ProductId: {ProductId}", request.ProductId);
             await unitOfWork.RollbackAsync(ct);
             throw;
         }

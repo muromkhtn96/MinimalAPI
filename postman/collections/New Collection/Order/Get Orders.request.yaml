@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Orders
+url: "{{baseUrl}}/api/orders?page=1&pageSize=10"
+method: GET
+queryParams:
+  page: "1"
+  pageSize: "10"
+order: 2000

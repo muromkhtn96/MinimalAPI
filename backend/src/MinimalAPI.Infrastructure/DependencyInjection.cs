@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MinimalAPI.Application.Abstractions;
@@ -17,14 +18,31 @@ public static class DependencyInjection
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")!;
 
-        // EF Core — KHÔNG bật EnableRetryOnFailure để dùng transaction
-        // tường minh (BeginTransaction/Commit/Rollback) theo kiểu try/catch.
+        // EF Core
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(connectionString));
 
-        // IApplicationDbContext — query side dùng LINQ (AsNoTracking)
+        // IApplicationDbContext
         services.AddScoped<IApplicationDbContext>(sp =>
             sp.GetRequiredService<AppDbContext>());
+
+        // Đăng ký Redis Distributed Cache ở đây
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = "localhost:6379";
+            options.InstanceName = "MinimalAPI_";
+        }); 
+
+        // Đăng ký HyridCache
+        services.AddHybridCache(options =>
+        {
+            options.DefaultEntryOptions = new HybridCacheEntryOptions
+            {
+                Expiration = TimeSpan.FromMinutes(10),     
+                LocalCacheExpiration = TimeSpan.FromMinutes(5)
+            };
+        });
+        
 
         // Repositories
         services.AddScoped<IProductRepository, ProductRepository>();
@@ -32,6 +50,8 @@ public static class DependencyInjection
         services.AddScoped<IInventoryRepository, InventoryRepository>();
         services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<IUnitOfWorkManager, UnitOfWorkManager>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IOrderDetailRepository, OrderDetailRepository>();
 
         // Helper sinh mã code tuần tự theo prefix
         services.AddScoped<ICodeGenerator, CodeGenerator>();

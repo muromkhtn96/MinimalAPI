@@ -6,6 +6,6 @@ namespace MinimalAPI.Application.Features.Inventories.CreateInventory;
 /// <summary>Command tạo tồn kho mới.</summary>
 public record CreateInventoryCommand(
     /// <summary> ID sản phẩm liên quan đến tồn kho. </summary>
-    Guid Id,
+    Guid ProductId,
     /// <summary> Số lượng tồn kho. </summary>
     long Quantity) : IRequest<Result<InventoryDto>>;

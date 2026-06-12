@@ -9,7 +9,7 @@ public class CreateInventoryValidator : AbstractValidator<CreateInventoryCommand
     /// </summary>
     public CreateInventoryValidator()
     {
-        RuleFor(x => x.Id)
+        RuleFor(x => x.ProductId)
             .NotEmpty()
             .WithMessage("Mã tồn kho không được để trống.");
 

@@ -1,0 +1,5 @@
+$kind: http-request
+name: Confirm Order
+url: "{{baseUrl}}/api/orders/{{orderId}}/confirm"
+method: PATCH
+order: 5000

@@ -22,4 +22,20 @@ public interface IRepository<TEntity, TId>
 
     /// <summary>Đánh dấu entity để xóa.</summary>
     void Remove(TEntity entity);
+    /// <summary>
+    /// Thêm nhiều entity vào kho lưu trữ.
+    /// </summary>
+    /// <param name="entities">Danh sách các entity cần thêm.</param>
+    void AddRange(IEnumerable<TEntity> entities);
+    /// <summary>
+    ///  Cập nhật nhiều entity trong kho lưu trữ.
+    /// </summary>
+    /// <param name="entities">Danh sách các entity cần cập nhật.</param>
+    void UpdateRange(IEnumerable<TEntity> entities);
+    /// <summary>
+    /// Xóa nhiều entity khỏi kho lưu trữ.
+    /// </summary>
+    /// <param name="entities">Danh sách các entity cần xóa.</param>
+    void RemoveRange(IEnumerable<TEntity> entities);
+
 }
