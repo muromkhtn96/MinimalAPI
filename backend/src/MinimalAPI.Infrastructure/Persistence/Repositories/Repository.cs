@@ -23,4 +23,10 @@ public abstract class Repository<TEntity, TId>(AppDbContext db) : IRepository<TE
     public void Update(TEntity entity) => Set.Update(entity);
 
     public void Remove(TEntity entity) => Set.Remove(entity);
+
+    public void AddRange(IEnumerable<TEntity> entities) => Set.AddRange(entities);
+    
+    public void UpdateRange(IEnumerable<TEntity> entities) => Set.UpdateRange(entities);
+
+    public void RemoveRange(IEnumerable<TEntity> entities) => Set.RemoveRange(entities);
 }

@@ -12,4 +12,6 @@ public interface IApplicationDbContext
     IQueryable<Category> Categories { get; }
     IQueryable<Inventory> Inventories { get; }
     IQueryable<Customer> Customers {get; }
+    IQueryable<Order> Orders {get; }
+    IQueryable<OrderDetail> OrderDetails {get; }
 }

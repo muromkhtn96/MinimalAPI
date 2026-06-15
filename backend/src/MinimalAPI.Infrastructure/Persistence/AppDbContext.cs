@@ -25,6 +25,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IMediat
     public DbSet<Inventory> Inventories => Set<Inventory>();
 
     public DbSet<Customer> Customers => Set<Customer>();
+    
+    public DbSet<Order> Orders => Set<Order>();
+    
+    public DbSet<OrderDetail> OrderDetails => Set<OrderDetail>();
 
     // Counter cho ICodeGenerator — internal, không expose qua IApplicationDbContext
     internal DbSet<CodeCounter> CodeCounters => Set<CodeCounter>();
@@ -34,6 +38,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IMediat
     IQueryable<Category> IApplicationDbContext.Categories => Categories.AsNoTracking();
     IQueryable<Inventory> IApplicationDbContext.Inventories => Inventories.AsNoTracking();
     IQueryable<Customer> IApplicationDbContext.Customers => Customers.AsNoTracking();
+    IQueryable<Order> IApplicationDbContext.Orders => Orders.AsNoTracking();
+    IQueryable<OrderDetail> IApplicationDbContext.OrderDetails => OrderDetails.AsNoTracking();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

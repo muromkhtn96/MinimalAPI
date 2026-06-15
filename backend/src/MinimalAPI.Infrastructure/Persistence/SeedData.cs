@@ -1,5 +1,7 @@
 using MinimalAPI.Domain.Entities;
 using MinimalAPI.Domain.ValueObjects;
+using MinimalAPI.Domain.Enums;
+using System.Linq;
 
 namespace MinimalAPI.Infrastructure.Persistence;
 
@@ -8,7 +10,7 @@ public static class SeedData
     public static async Task SeedAsync(AppDbContext context)
     {
         // Kiểm tra nếu đã có data thì không seed
-        if (context.Categories.Any() || context.Products.Any())
+        if (context.Categories.Any() || context.Products.Any() || context.Customers.Any())
         {
             return;
         }
@@ -61,11 +63,47 @@ public static class SeedData
             )
         };
 
-        // Khởi tạo bộ đếm
-        var spCounter = new CodeCounter { Prefix = "SP", CurrentValue = 5 };
-        
-        context.CodeCounters.Add(spCounter);
         context.Products.AddRange(products);
+        await context.SaveChangesAsync();
+
+        // Tạo Inventories tương ứng cho từng sản phẩm
+        var inventories = products.Select(p => Inventory.Create(p.Id, 100)).ToArray();
+        context.Inventories.AddRange(inventories);
+
+        // Tạo Customers mẫu
+        var customer1 = Customer.Create(
+            "KH00001",
+            "Nguyễn Văn A",
+            "nguyenvana@gmail.com",
+            "0901234567",
+            CustomerType.Individual,
+            null,
+            Gender.Male,
+            new DateTime(1990, 1, 1),
+            "123 Đường Lê Lợi, TP. HCM",
+            "Khách hàng VIP"
+        );
+        var customer2 = Customer.Create(
+            "KH00002",
+            "Trần Thị B",
+            "tranthib@gmail.com",
+            "0987654321",
+            CustomerType.Individual,
+            null,
+            Gender.Female,
+            new DateTime(1995, 5, 5),
+            "456 Đường Nguyễn Huệ, TP. HCM",
+            null
+        );
+        context.Customers.AddRange(customer1, customer2);
+
+        // Khởi tạo các bộ đếm mã tự sinh (CodeCounters)
+        var spCounter = new CodeCounter { Prefix = "SP", CurrentValue = 5 };
+        var khCounter = new CodeCounter { Prefix = "KH", CurrentValue = 2 };
+        var dhCounter = new CodeCounter { Prefix = "DH", CurrentValue = 0 };
+
+        context.CodeCounters.AddRange(spCounter, khCounter, dhCounter);
+        
         await context.SaveChangesAsync();   
     }
 }
