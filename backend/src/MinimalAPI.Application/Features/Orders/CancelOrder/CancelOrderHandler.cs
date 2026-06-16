@@ -7,11 +7,6 @@ using MinimalAPI.Application.Features.Orders.DTOs;
 using MinimalAPI.Domain.Entities;
 using MinimalAPI.Domain.Enums;
 using MinimalAPI.Domain.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace MinimalAPI.Application.Features.Orders.CancelOrder;
 
@@ -26,7 +21,7 @@ public sealed class CancelOrderHandler(
     : IRequestHandler<CancelOrderCommand, Result<OrderDto>>
 {
     /// <summary>
-    /// Xử lý lệnh hủy đơn hàng, bao gồm kiểm tra trạng thái đơn hàng
+    /// Xử lý lệnh hủy đơn hàng, bao gồm kiểm tra trạng thái đơn hàng, chuẩn bị hoàn trả tồn kho nếu đã xác nhận và ghi dữ liệu trong Unit of Work
     /// </summary>
     /// <param name="request"></param>
     /// <param name="ct"></param>
@@ -36,29 +31,37 @@ public sealed class CancelOrderHandler(
         var orderResult = await GetAndValidateOrderForCancellationAsync(request.Id, ct);
         if (!orderResult.IsSuccess) 
             return Result<OrderDto>.Failure(orderResult.Error!);
+            
         var order = orderResult.Value!;
-
         var customerName = await GetCustomerNameAsync(order.CustomerId, ct);
+        var details = await orderDetailRepo.GetByOrderIdAsync(order.Id, ct);
 
-        var previousStatus = order.Status;
-        await using var unitOfWork = await unitOfWorkManager.NewUnitOfWorkAsync(ct
-        );
+        List<Inventory> restoredInventories = [];
+        if (order.Status == OrderStatus.Confirmed)
+        {
+            var restoreResult = await PrepareInventoryRestorationAsync(details, ct);
+            if (!restoreResult.IsSuccess)
+                return Result<OrderDto>.Failure(restoreResult.Error!);
+            restoredInventories = restoreResult.Value!;
+        }
+
+        await using var unitOfWork = await unitOfWorkManager.NewUnitOfWorkAsync(ct);
         try
         {
-            if (previousStatus == OrderStatus.Confirmed)
+            if (restoredInventories.Count > 0)
             {
-                var restoreResult = await RestoreInventoryStockAsync(order.Id, ct);
-                if (!restoreResult.IsSuccess) 
-                    return Result<OrderDto>.Failure(restoreResult.Error!);
+                inventoryRepo.UpdateRange(restoredInventories);
             }
 
             UpdateOrderStatusToCancelled(order);
             orderRepo.Update(order);
 
+            // await hybridCache.RemoveAsync($"order:{order.Id.Value}", ct);
+            // await hybridCache.RemoveAsync($"order:code:{order.Code}", ct);
+
             await unitOfWork.CommitAsync(ct);
             logger.LogInformation("Hủy đơn hàng {Id} thành công", order.Id.Value);
             
-            var details = await orderDetailRepo.GetByOrderIdAsync(order.Id, ct);
             return Result<OrderDto>.Success(MapToDto(order, details, customerName));
         }
         catch (Exception ex)
@@ -93,9 +96,9 @@ public sealed class CancelOrderHandler(
         return customer?.FullName ?? "Khách vô danh";
     }
 
-    private async Task<Result<bool>> RestoreInventoryStockAsync(OrderId orderId, CancellationToken ct)
+    private async Task<Result<List<Inventory>>> PrepareInventoryRestorationAsync(
+        IReadOnlyList<OrderDetail> details, CancellationToken ct)
     {
-        var details = await orderDetailRepo.GetByOrderIdAsync(orderId, ct);
         var entities = new List<Inventory>();
 
         foreach (var item in details)
@@ -103,14 +106,13 @@ public sealed class CancelOrderHandler(
             var exist = await inventoryRepo.GetByProductIdAsync(item.ProductId, ct);
             if (exist is null)
             {
-                return Result<bool>.Failure("Không tìm thấy tồn kho của sản phẩm.");
+                return Result<List<Inventory>>.Failure("Không tìm thấy tồn kho của sản phẩm.");
             }
             exist.UpdateQuantity(exist.Quantity + item.Quantity);
             entities.Add(exist);
         }
 
-        inventoryRepo.UpdateRange(entities);
-        return Result<bool>.Success(true);
+        return Result<List<Inventory>>.Success(entities);
     }
 
     private void UpdateOrderStatusToCancelled(Order order)
