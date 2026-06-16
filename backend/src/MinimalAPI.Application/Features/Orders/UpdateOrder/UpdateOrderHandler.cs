@@ -1,4 +1,6 @@
 using MediatR;
+// using Microsoft.Extensions.Caching.Distributed;
+// using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Orders.DTOs;
@@ -6,13 +8,7 @@ using MinimalAPI.Domain.Entities;
 using MinimalAPI.Domain.Enums;
 using MinimalAPI.Domain.ValueObjects;
 using MinimalAPI.Domain.Interfaces;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.Hybrid;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+
 
 namespace MinimalAPI.Application.Features.Orders.UpdateOrder;
 public sealed class UpdateOrderHandler(
@@ -26,6 +22,11 @@ public sealed class UpdateOrderHandler(
     ILogger<UpdateOrderHandler> logger)
     : IRequestHandler<UpdateOrderCommand, Result<OrderDto>>
 {
+    /// <summary>
+    /// Xử lý lệnh cập nhật đơn hàng, bao gồm kiểm tra trạng thái đơn hàng, chuẩn bị chi tiết mới và validate tồn kho ngoài Unit of Work, sau đó ghi dữ liệu trong Unit of Work
+    /// </summary>
+    /// <param name="Products"></param>
+    /// <param name="NewDetails"></param>
     private record UpdatePreparedData(List<Product> Products, List<OrderDetail> NewDetails);
 
     public async Task<Result<OrderDto>> Handle(UpdateOrderCommand request, CancellationToken ct)
@@ -56,6 +57,9 @@ public sealed class UpdateOrderHandler(
 
             orderRepo.Update(order);
             await unitOfWork.CommitAsync(ct);
+
+            // await hybridCache.RemoveAsync($"order:{order.Id.Value}", ct);
+            // await hybridCache.RemoveAsync($"order:code:{order.Code}", ct);
 
             logger.LogInformation("Cập nhật đơn hàng {OrderId} thành công", order.Id.Value);
 
