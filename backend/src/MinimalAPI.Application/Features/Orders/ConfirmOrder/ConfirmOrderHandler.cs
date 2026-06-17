@@ -1,6 +1,5 @@
 using MediatR;
 // using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Orders.DTOs;
@@ -17,7 +16,7 @@ public sealed class ConfirmOrderHandler(
     ICustomerRepository customerRepo,
     IProductRepository productRepo,
     IUnitOfWorkManager unitOfWorkManager,
-    HybridCache hybridCache,
+    ICacheService cacheService,
     ILogger<ConfirmOrderHandler> logger)
     : IRequestHandler<ConfirmOrderCommand, Result<OrderDto>>
 {
@@ -57,8 +56,8 @@ public sealed class ConfirmOrderHandler(
 
             await unitOfWork.CommitAsync(ct);
             
-            await hybridCache.RemoveAsync(CacheKeys.OrderById(order.Id.Value), ct);
-            await hybridCache.RemoveAsync(CacheKeys.OrderByCode(order.Code), ct);
+            await cacheService.RemoveAsync(CacheKeys.OrderById(order.Id.Value), ct);
+            await cacheService.RemoveAsync(CacheKeys.OrderByCode(order.Code), ct);
 
             logger.LogInformation("Xác nhận đơn hàng {Id} thành công, đã trừ tồn kho", order.Id.Value);
             

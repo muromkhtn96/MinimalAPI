@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Products.DTOs;
@@ -13,7 +12,7 @@ public sealed class UpdateProductHandler(
     IProductRepository productRepo,
     ICategoryRepository categoryRepo,
     IUnitOfWorkManager unitOfWorkManager,
-    HybridCache hybridCache,
+    ICacheService cacheService,
     ILogger<UpdateProductHandler> logger)
     : IRequestHandler<UpdateProductCommand, Result<ProductDto>>
 {
@@ -50,8 +49,8 @@ public sealed class UpdateProductHandler(
 
             await unitOfWork.CommitAsync(ct);
 
-            await hybridCache.RemoveAsync(CacheKeys.ProductById(product.Id.Value), ct);
-            await hybridCache.RemoveAsync(CacheKeys.ProductByCode(product.Code), ct);
+            await cacheService.RemoveAsync(CacheKeys.ProductById(product.Id.Value), ct);
+            await cacheService.RemoveAsync(CacheKeys.ProductByCode(product.Code), ct);
 
             logger.LogInformation(
                 "Sản phẩm {ProductId} đã được cập nhật - tên: '{Name}', giá: {Price} {Currency}",

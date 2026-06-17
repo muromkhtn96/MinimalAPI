@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Customers.DTOs;
@@ -9,7 +8,7 @@ namespace MinimalAPI.Application.Features.Customers.DeleteCustomer;
 public sealed class DeleteCustomerHandler(
     ICustomerRepository customerRepository,
     IUnitOfWorkManager unitOfWorkManager,
-    HybridCache hybridCache,
+    ICacheService cacheService,
     ILogger<DeleteCustomerHandler> logger)
     : IRequestHandler<DeleteCustomerCommand, Result<CustomerDto>>
 {
@@ -36,8 +35,8 @@ public sealed class DeleteCustomerHandler(
             customerRepository.Remove(customer);
             await unitOfWork.CommitAsync(ct);
 
-            await hybridCache.RemoveAsync(CacheKeys.CustomerById(request.Id), ct);
-            await hybridCache.RemoveAsync(CacheKeys.CustomerByCode(customer.Code), ct);
+            await cacheService.RemoveAsync(CacheKeys.CustomerById(request.Id), ct);
+            await cacheService.RemoveAsync(CacheKeys.CustomerByCode(customer.Code), ct);
 
             logger.LogInformation("Đã xóa khách hàng {CustomerId} '{FullName}' - trạng thái trước đó: {Status}",
                 customer.Id.Value, 

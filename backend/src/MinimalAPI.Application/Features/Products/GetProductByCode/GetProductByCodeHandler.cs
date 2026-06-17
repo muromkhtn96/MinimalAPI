@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.Extensions.Caching.Hybrid;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Products.DTOs;
 using MinimalAPI.Domain.Interfaces;
@@ -7,7 +6,7 @@ using MinimalAPI.Domain.Interfaces;
 namespace MinimalAPI.Application.Features.Products.GetProductByCode; 
 public sealed class GetProductByCodeHandler(
     IProductRepository productRepository,
-    HybridCache hybridCache)
+    ICacheService cacheService)
     : IRequestHandler<GetProductByCodeQuery, Result<ProductDto>>
 {
     /// <summary>
@@ -20,7 +19,7 @@ public sealed class GetProductByCodeHandler(
     {
         var cacheKey = CacheKeys.ProductByCode(request.Code);
 
-        var dto = await hybridCache.GetOrCreateAsync<ProductDto?>(
+        var dto = await cacheService.GetOrCreateAsync<ProductDto?>(
             cacheKey,
             async token =>
             {

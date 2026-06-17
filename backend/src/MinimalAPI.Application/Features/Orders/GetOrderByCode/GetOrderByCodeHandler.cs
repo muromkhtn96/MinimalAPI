@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Orders.DTOs;
@@ -11,7 +10,7 @@ public sealed class GetOrderByCodeHandler(
     IOrderRepository orderRepository,
     ICustomerRepository customerRepository,
     IProductRepository productRepository,
-    HybridCache hybridCache) 
+    ICacheService cacheService) 
     : IRequestHandler<GetOrderByCodeQuery, Result<OrderDto>>
 {
     /// <summary>
@@ -24,7 +23,7 @@ public sealed class GetOrderByCodeHandler(
     {
         string cacheKey = CacheKeys.OrderByCode(request.Code);
 
-        var dto = await hybridCache.GetOrCreateAsync<OrderDto?>(
+        var dto = await cacheService.GetOrCreateAsync<OrderDto?>(
             cacheKey,
             async token =>
             {

@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.Extensions.Caching.Hybrid;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Categories.DTOs;
 using MinimalAPI.Domain.Entities;
@@ -9,14 +8,14 @@ namespace MinimalAPI.Application.Features.Categories.GetCategory;
 
 public sealed class GetCategoryHandler(
     ICategoryRepository categoryRepository,
-    HybridCache hybridCache)
+    ICacheService cacheService)
     : IRequestHandler<GetCategoryByIdQuery, Result<CategoryDto>>
 {
     public async Task<Result<CategoryDto>> Handle(GetCategoryByIdQuery request, CancellationToken ct)
     {
         var cacheKey = CacheKeys.CategoryById(request.Id);
 
-        var dto = await hybridCache.GetOrCreateAsync<CategoryDto?>(
+        var dto = await cacheService.GetOrCreateAsync<CategoryDto?>(
             cacheKey,
             async token =>
             {

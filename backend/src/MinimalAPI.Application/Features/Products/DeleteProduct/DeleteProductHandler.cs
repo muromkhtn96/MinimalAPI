@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Products.DTOs;
@@ -11,7 +10,7 @@ namespace MinimalAPI.Application.Features.Products.DeleteProduct;
 public sealed class DeleteProductHandler(
     IProductRepository productRepo,
     IUnitOfWorkManager unitOfWorkManager,
-    HybridCache hybridCache,
+    ICacheService cacheService,
     ILogger<DeleteProductHandler> logger)
     : IRequestHandler<DeleteProductCommand, Result<ProductDto>>
 {
@@ -38,8 +37,8 @@ public sealed class DeleteProductHandler(
             productRepo.Remove(product);
             await unitOfWork.CommitAsync(ct);
 
-            await hybridCache.RemoveAsync(CacheKeys.ProductById(request.Id), ct);
-            await hybridCache.RemoveAsync(CacheKeys.ProductByCode(productCode), ct);
+            await cacheService.RemoveAsync(CacheKeys.ProductById(request.Id), ct);
+            await cacheService.RemoveAsync(CacheKeys.ProductByCode(productCode), ct);
 
             logger.LogInformation("Đã xóa sản phẩm {ProductId} '{Name}'",
                 product.Id.Value, product.Name.Value);

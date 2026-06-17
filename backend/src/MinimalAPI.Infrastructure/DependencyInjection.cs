@@ -29,7 +29,7 @@ public static class DependencyInjection
         // Đăng ký Redis Distributed Cache ở đây
         services.AddStackExchangeRedisCache(options =>
         {
-            options.Configuration = configuration.GetConnectionString("Redis") ?? "localhost:6379";
+            options.Configuration = configuration.GetConnectionString("Redis");
             options.InstanceName = "MinimalAPI_";
         }); 
 
@@ -43,7 +43,6 @@ public static class DependencyInjection
             };
         });
         
-
         // Repositories
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
@@ -51,11 +50,9 @@ public static class DependencyInjection
         services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<IUnitOfWorkManager, UnitOfWorkManager>();
         services.AddScoped<IOrderRepository, OrderRepository>();
-        // services.AddSingleton
+        services.AddSingleton<ICacheService, CacheService>();
         services.AddScoped<IOrderDetailRepository, OrderDetailRepository>();
         // services.AddTransient
-
-        // Helper sinh mã code tuần tự theo prefix
         services.AddScoped<ICodeGenerator, CodeGenerator>();
 
         return services;

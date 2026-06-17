@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Customers.DTOs;
@@ -10,7 +9,7 @@ namespace MinimalAPI.Application.Features.Customers.UpdateCustomer;
 public sealed class UpdateCustomerHandler(
     ICustomerRepository customerRepository,
     IUnitOfWorkManager unitOfWorkManager,
-    HybridCache hybridCache,
+    ICacheService cacheService,
     ILogger<UpdateCustomerHandler> logger)
     : IRequestHandler<UpdateCustomerCommand, Result<CustomerDto>>
 {
@@ -44,8 +43,8 @@ public sealed class UpdateCustomerHandler(
         {
             await unitOfWork.CommitAsync(ct);
 
-            await hybridCache.RemoveAsync(CacheKeys.CustomerById(request.Id), ct);
-            await hybridCache.RemoveAsync(CacheKeys.CustomerByCode(customerCode), ct);
+            await cacheService.RemoveAsync(CacheKeys.CustomerById(request.Id), ct);
+            await cacheService.RemoveAsync(CacheKeys.CustomerByCode(customerCode), ct);
 
             logger.LogInformation("Cập nhật khách hàng {Code} thành công", customer.Code);
 
