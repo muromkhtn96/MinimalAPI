@@ -11,6 +11,7 @@ namespace MinimalAPI.Application.Features.Customers.ActivateCustomer;
 public sealed class ActivateCustomerHandler(
     ICustomerRepository customerRepository,
     IUnitOfWorkManager unitOfWorkManager,
+    ICacheService cacheService,
     ILogger<ActivateCustomerHandler> logger)
     : IRequestHandler<ActivateCustomerCommand, Result<CustomerDto>>
 {
@@ -34,6 +35,9 @@ public sealed class ActivateCustomerHandler(
         {
             customer.Activate();
             await unitOfWork.CommitAsync(ct);
+
+            await cacheService.RemoveAsync(CacheKeys.CustomerById(request.Id), ct);
+            await cacheService.RemoveAsync(CacheKeys.CustomerByCode(customer.Code), ct);
 
             logger.LogInformation("Kích hoạt khách hàng {Id} thành công", customer.Id.Value);
 

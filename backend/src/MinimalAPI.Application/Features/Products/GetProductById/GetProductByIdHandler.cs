@@ -1,29 +1,33 @@
 using MediatR;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Products.DTOs;
+using MinimalAPI.Domain.Entities;
 using MinimalAPI.Domain.Interfaces;
 
-namespace MinimalAPI.Application.Features.Products.GetProductByCode; 
-public sealed class GetProductByCodeHandler(
+namespace MinimalAPI.Application.Features.Products.GetProduct;
+
+public sealed class GetProductHandler(
     IProductRepository productRepository,
-    ICacheService cacheService)
-    : IRequestHandler<GetProductByCodeQuery, Result<ProductDto>>
+    ICacheService cacheService)                    
+    : IRequestHandler<GetProductByIdQuery, Result<ProductDto>>
 {
     /// <summary>
-    /// Xử lý truy vấn lấy sản phẩm theo mã.
+    /// 
     /// </summary>
     /// <param name="request"></param>
     /// <param name="ct"></param>
     /// <returns></returns>
-    public async Task<Result<ProductDto>> Handle(GetProductByCodeQuery request, CancellationToken ct)
+    public async Task<Result<ProductDto>> Handle(GetProductByIdQuery request, CancellationToken ct)
     {
-        var cacheKey = CacheKeys.ProductByCode(request.Code);
+        var cacheKey = CacheKeys.ProductById(request.Id);
 
         var dto = await cacheService.GetOrCreateAsync<ProductDto?>(
             cacheKey,
             async token =>
             {
-                var product = await productRepository.GetByCodeAsync(request.Code, token);
+                var productId = new ProductId(request.Id);
+                var product = await productRepository.GetByIdAsync(productId, token);
+
                 if (product is null)
                 {
                     return null;
@@ -42,12 +46,13 @@ public sealed class GetProductByCodeHandler(
                     product.CreatedAt);
             },
             cancellationToken: ct);
-
+        
         if (dto is null)
         {
             return Result<ProductDto>.Failure("Không tìm thấy sản phẩm");
         }
 
         return Result<ProductDto>.Success(dto);
+
     }
 }

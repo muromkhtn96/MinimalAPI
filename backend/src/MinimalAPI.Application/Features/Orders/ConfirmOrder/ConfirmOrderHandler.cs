@@ -17,7 +17,7 @@ public sealed class ConfirmOrderHandler(
     ICustomerRepository customerRepo,
     IProductRepository productRepo,
     IUnitOfWorkManager unitOfWorkManager,
-    // HybridCache hybridCache,
+    ICacheService cacheService,
     ILogger<ConfirmOrderHandler> logger)
     : IRequestHandler<ConfirmOrderCommand, Result<OrderDto>>
 {
@@ -56,9 +56,9 @@ public sealed class ConfirmOrderHandler(
             orderRepo.Update(order);
 
             await unitOfWork.CommitAsync(ct);
-
-            // await hybridCache.RemoveAsync($"order:{order.Id.Value}", ct);
-            // await hybridCache.RemoveAsync($"order:code:{order.Code}", ct);
+            
+            await cacheService.RemoveAsync(CacheKeys.OrderById(order.Id.Value), ct);
+            await cacheService.RemoveAsync(CacheKeys.OrderByCode(order.Code), ct);
 
             logger.LogInformation("Xác nhận đơn hàng {Id} thành công, đã trừ tồn kho", order.Id.Value);
             

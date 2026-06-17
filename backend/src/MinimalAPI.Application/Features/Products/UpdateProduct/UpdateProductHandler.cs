@@ -12,6 +12,7 @@ public sealed class UpdateProductHandler(
     IProductRepository productRepo,
     ICategoryRepository categoryRepo,
     IUnitOfWorkManager unitOfWorkManager,
+    ICacheService cacheService,
     ILogger<UpdateProductHandler> logger)
     : IRequestHandler<UpdateProductCommand, Result<ProductDto>>
 {
@@ -47,6 +48,9 @@ public sealed class UpdateProductHandler(
             product.UpdatePrice(productPrice);
 
             await unitOfWork.CommitAsync(ct);
+
+            await cacheService.RemoveAsync(CacheKeys.ProductById(product.Id.Value), ct);
+            await cacheService.RemoveAsync(CacheKeys.ProductByCode(product.Code), ct);
 
             logger.LogInformation(
                 "Sản phẩm {ProductId} đã được cập nhật - tên: '{Name}', giá: {Price} {Currency}",

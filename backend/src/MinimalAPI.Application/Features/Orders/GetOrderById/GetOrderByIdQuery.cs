@@ -7,4 +7,6 @@ namespace MinimalAPI.Application.Features.Orders.GetOrderById;
 /// Truy vấn lấy đơn hàng theo ID
 /// </summary>
 /// <param name="id"></param>
-public sealed record GetOrderByIdQuery(Guid id) : IRequest<Result<OrderDto>>;
+public sealed record GetOrderByIdQuery(
+    /// <summary>Mã đơn hàng</summary>
+    Guid Id) : IRequest<Result<OrderDto>>;

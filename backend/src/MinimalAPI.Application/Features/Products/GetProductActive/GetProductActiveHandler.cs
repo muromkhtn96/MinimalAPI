@@ -6,7 +6,9 @@ using MinimalAPI.Domain.Interfaces;
 
 namespace MinimalAPI.Application.Features.Products.GetProductActive;
 
-public sealed class GetProductActiveHandler(IProductRepository productRepo) : IRequestHandler<GetProductActiveQuery, Result<List<ProductDto>>>
+public sealed class GetProductActiveHandler(
+    IProductRepository productRepository)
+    : IRequestHandler<GetProductActiveQuery, Result<List<ProductDto>>>
 {
     /// <summary>
     /// Xử lý truy vấn lấy danh sách sản phẩm hoạt động.
@@ -16,8 +18,7 @@ public sealed class GetProductActiveHandler(IProductRepository productRepo) : IR
     /// <returns></returns>
     public async Task<Result<List<ProductDto>>> Handle(GetProductActiveQuery request, CancellationToken ct)
     {
-        Task<List<Product>> getActiveProductsTask = productRepo.GetActiveProductsAsync(ct); 
-        List<Product> products = await getActiveProductsTask;
+        List<Product> products = await productRepository.GetActiveProductsAsync(ct);
 
         var dtos = products
             .Select(p => new ProductDto(

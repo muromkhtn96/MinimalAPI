@@ -1,6 +1,5 @@
 using MediatR;
 // using Microsoft.Extensions.Caching.Distributed;
-// using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Orders.DTOs;
@@ -16,7 +15,7 @@ public sealed class CancelOrderHandler(
     IInventoryRepository inventoryRepo,
     ICustomerRepository customerRepo,
     IUnitOfWorkManager unitOfWorkManager,
-    // HybridCache hybridCache,
+    ICacheService cacheService,
     ILogger<CancelOrderHandler> logger)
     : IRequestHandler<CancelOrderCommand, Result<OrderDto>>
 {
@@ -56,10 +55,11 @@ public sealed class CancelOrderHandler(
             UpdateOrderStatusToCancelled(order);
             orderRepo.Update(order);
 
-            // await hybridCache.RemoveAsync($"order:{order.Id.Value}", ct);
-            // await hybridCache.RemoveAsync($"order:code:{order.Code}", ct);
-
             await unitOfWork.CommitAsync(ct);
+
+            await cacheService.RemoveAsync(CacheKeys.OrderById(order.Id.Value), ct);
+            await cacheService.RemoveAsync(CacheKeys.OrderByCode(order.Code), ct);
+
             logger.LogInformation("Hủy đơn hàng {Id} thành công", order.Id.Value);
             
             return Result<OrderDto>.Success(MapToDto(order, details, customerName));

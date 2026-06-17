@@ -1,12 +1,15 @@
 using MediatR;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Products.DTOs;
+using MinimalAPI.Domain.Entities;
 using MinimalAPI.Domain.Interfaces;
 
 
 namespace MinimalAPI.Application.Features.Products.GetProductDeactive;
 
-public sealed class GetProductDeactiveHandler(IProductRepository productRepository) : IRequestHandler<GetProductDeactiveQuery, Result<List<ProductDto>>>
+public sealed class GetProductDeactiveHandler(
+    IProductRepository productRepository) 
+    : IRequestHandler<GetProductDeactiveQuery, Result<List<ProductDto>>>
 {
     /// <summary>
     /// Xử lý truy vấn lấy danh sách sản phẩm không hoạt động.
@@ -16,7 +19,7 @@ public sealed class GetProductDeactiveHandler(IProductRepository productReposito
     /// <returns></returns>
     public async Task<Result<List<ProductDto>>> Handle(GetProductDeactiveQuery request, CancellationToken ct)
     {
-        var products = await productRepository.GetDeactiveProductsAsync(ct);
+        List<Product> products = await productRepository.GetDeactiveProductsAsync(ct);
 
         var dtos = products
             .Select(p => new ProductDto(

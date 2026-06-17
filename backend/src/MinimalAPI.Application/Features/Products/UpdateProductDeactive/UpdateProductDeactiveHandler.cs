@@ -10,6 +10,7 @@ namespace MinimalAPI.Application.Features.Products.UpdateProductDeactive;
 public sealed class UpdateProductDeactiveHandler(
     IProductRepository productRepository,
     IUnitOfWorkManager unitOfWorkManager,
+    ICacheService cacheService,
     ILogger<UpdateProductDeactiveHandler> logger)
     : IRequestHandler<UpdateProductDeactiveCommand, Result<ProductDto>>
 {
@@ -41,6 +42,9 @@ public sealed class UpdateProductDeactiveHandler(
         {
             product.Deactivate();
             await unitOfWork.CommitAsync(ct);
+
+            await cacheService.RemoveAsync(CacheKeys.ProductById(product.Id.Value), ct);
+            await cacheService.RemoveAsync(CacheKeys.ProductByCode(product.Code), ct);
 
             logger.LogInformation("Đã hủy kích hoạt sản phẩm {ProductId} '{Name}'",
                 product.Id.Value, product.Name.Value);

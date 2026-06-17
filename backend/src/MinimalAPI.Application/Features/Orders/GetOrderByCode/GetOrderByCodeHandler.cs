@@ -1,5 +1,5 @@
 using MediatR;
-using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Orders.DTOs;
 using MinimalAPI.Domain.Interfaces;
@@ -10,7 +10,7 @@ public sealed class GetOrderByCodeHandler(
     IOrderRepository orderRepository,
     ICustomerRepository customerRepository,
     IProductRepository productRepository,
-    HybridCache hybridCache) 
+    ICacheService cacheService) 
     : IRequestHandler<GetOrderByCodeQuery, Result<OrderDto>>
 {
     /// <summary>
@@ -21,11 +21,11 @@ public sealed class GetOrderByCodeHandler(
     /// <returns></returns>
     public async Task<Result<OrderDto>> Handle(GetOrderByCodeQuery request, CancellationToken ct)
     {
-        string cacheKey = $"order:code:{request.Code}";
+        string cacheKey = CacheKeys.OrderByCode(request.Code);
 
-        var orderDto = await hybridCache.GetOrCreateAsync<OrderDto?>(
+        var dto = await cacheService.GetOrCreateAsync<OrderDto?>(
             cacheKey,
-            async token => 
+            async token =>
             {
                 var order = await orderRepository.GetByCodeAsync(request.Code, token);
                 if (order is null)
@@ -45,8 +45,7 @@ public sealed class GetOrderByCodeHandler(
                         product?.Name.Value ?? "Sản phẩm không xác định",
                         detail.Quantity,
                         detail.UnitPrice.Amount,
-                        detail.LineTotal.Amount
-                    ));
+                        detail.LineTotal.Amount));
                 }
 
                 return new OrderDto(
@@ -59,17 +58,15 @@ public sealed class GetOrderByCodeHandler(
                     order.TotalAmount.Currency,
                     order.Note,
                     order.CreatedAt,
-                    detailDtos 
-                );
+                    detailDtos);
             },
-            cancellationToken: ct
-        );
-
-        if (orderDto is null)
+            cancellationToken: ct);
+        
+        if (dto is null)
         {
-            return Result<OrderDto>.Failure("Mã đơn hàng không tồn tại");
+            return Result<OrderDto>.Failure("Không tìm thấy đơn hàng.");
         }
 
-        return Result<OrderDto>.Success(orderDto);
+        return Result<OrderDto>.Success(dto);
     }
 }

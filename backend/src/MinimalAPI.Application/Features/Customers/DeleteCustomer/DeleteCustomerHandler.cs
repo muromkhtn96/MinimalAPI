@@ -8,6 +8,7 @@ namespace MinimalAPI.Application.Features.Customers.DeleteCustomer;
 public sealed class DeleteCustomerHandler(
     ICustomerRepository customerRepository,
     IUnitOfWorkManager unitOfWorkManager,
+    ICacheService cacheService,
     ILogger<DeleteCustomerHandler> logger)
     : IRequestHandler<DeleteCustomerCommand, Result<CustomerDto>>
 {
@@ -25,11 +26,18 @@ public sealed class DeleteCustomerHandler(
             logger.LogWarning("Xóa khách hàng bị từ chối - Không tìm thấy khách hàng {CustomerId}", request.Id);
             return Result<CustomerDto>.Failure("Khách hàng không tồn tại.");
         }
+
+        var CustomerByCode = customer.Code;
+
         await using var unitOfWork = await unitOfWorkManager.NewUnitOfWorkAsync(ct);
         try
         {
             customerRepository.Remove(customer);
             await unitOfWork.CommitAsync(ct);
+
+            await cacheService.RemoveAsync(CacheKeys.CustomerById(request.Id), ct);
+            await cacheService.RemoveAsync(CacheKeys.CustomerByCode(customer.Code), ct);
+
             logger.LogInformation("Đã xóa khách hàng {CustomerId} '{FullName}' - trạng thái trước đó: {Status}",
                 customer.Id.Value, 
                 customer.FullName, 

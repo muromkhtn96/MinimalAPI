@@ -10,6 +10,7 @@ namespace MinimalAPI.Application.Features.Categories.UpdateCategory;
 public sealed class UpdateCategoryHandler(
     ICategoryRepository categoryRepo,
     IUnitOfWorkManager unitOfWorkManager,
+    ICacheService cacheService,
     ILogger<UpdateCategoryHandler> logger)
     : IRequestHandler<UpdateCategoryCommand, Result<CategoryDto>>
 {
@@ -33,6 +34,8 @@ public sealed class UpdateCategoryHandler(
         {
             category.Update(request.Name, request.Description);
             await unitOfWork.CommitAsync(ct);
+
+            await cacheService.RemoveAsync(CacheKeys.CategoryById(category.Id.Value), ct);
 
             logger.LogInformation("Danh mục {CategoryId} đã được cập nhật - tên mới: '{Name}'",
                 category.Id.Value, category.Name);

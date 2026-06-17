@@ -12,6 +12,7 @@ public sealed class DeleteCategoryHandler(
     ICategoryRepository categoryRepo,
     IApplicationDbContext db,
     IUnitOfWorkManager unitOfWorkManager,
+    ICacheService cacheService,
     ILogger<DeleteCategoryHandler> logger)
     : IRequestHandler<DeleteCategoryCommand, Result<CategoryDto>>
 {
@@ -39,6 +40,8 @@ public sealed class DeleteCategoryHandler(
         {
             categoryRepo.Remove(category);
             await unitOfWork.CommitAsync(ct);
+
+            await cacheService.RemoveAsync(CacheKeys.CategoryById(category.Id.Value), ct);
 
             logger.LogInformation("Đã xóa thành công danh mục {CategoryId} '{Name}'",
                     category.Id.Value, category.Name);
