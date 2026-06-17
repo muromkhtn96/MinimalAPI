@@ -30,10 +30,10 @@ public static class CategoryEndpoints
 
         group.MapGet("/{id:guid}", async Task<IResult> (Guid id, ISender sender) =>
         {
-            var result = await sender.Send(new GetCategoryQuery(id));
-            return result is not null
-                ? TypedResults.Ok(result)
-                : TypedResults.NotFound();
+            var result = await sender.Send(new GetCategoryByIdQuery(id));
+            return result.IsSuccess
+                ? TypedResults.Ok(result.Value)
+                : TypedResults.NotFound(new { error = result.Error });
         })
         .WithName("GetCategory")
         .WithSummary("Lấy chi tiết danh mục")

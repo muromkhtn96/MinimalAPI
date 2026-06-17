@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Products.DTOs;
@@ -10,6 +11,7 @@ namespace MinimalAPI.Application.Features.Products.UpdateProductActive;
 public sealed class UpdateProductActiveHandler(
     IProductRepository productRepo,
     IUnitOfWorkManager unitOfWorkManager,
+    HybridCache hybridCache,
     ILogger<UpdateProductActiveHandler> logger)
     : IRequestHandler<UpdateProductActiveCommand, Result<ProductDto>>
 {
@@ -41,6 +43,9 @@ public sealed class UpdateProductActiveHandler(
         {
             product.Activate();
             await unitOfWork.CommitAsync(ct);
+
+            await hybridCache.RemoveAsync(CacheKeys.ProductById(product.Id.Value), ct);
+            await hybridCache.RemoveAsync(CacheKeys.ProductByCode(product.Code), ct);
 
             logger.LogInformation("Đã kích hoạt sản phẩm {ProductId} '{Name}'",
                     product.Id.Value, product.Name.Value);

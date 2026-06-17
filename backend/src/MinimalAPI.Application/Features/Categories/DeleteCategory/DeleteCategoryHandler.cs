@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Categories.DTOs;
@@ -12,6 +13,7 @@ public sealed class DeleteCategoryHandler(
     ICategoryRepository categoryRepo,
     IApplicationDbContext db,
     IUnitOfWorkManager unitOfWorkManager,
+    HybridCache hybridCache,
     ILogger<DeleteCategoryHandler> logger)
     : IRequestHandler<DeleteCategoryCommand, Result<CategoryDto>>
 {
@@ -39,6 +41,8 @@ public sealed class DeleteCategoryHandler(
         {
             categoryRepo.Remove(category);
             await unitOfWork.CommitAsync(ct);
+
+            await hybridCache.RemoveAsync(CacheKeys.CategoryById(category.Id.Value), ct);
 
             logger.LogInformation("Đã xóa thành công danh mục {CategoryId} '{Name}'",
                     category.Id.Value, category.Name);

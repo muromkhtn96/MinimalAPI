@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Categories.DTOs;
@@ -10,6 +11,7 @@ namespace MinimalAPI.Application.Features.Categories.UpdateCategory;
 public sealed class UpdateCategoryHandler(
     ICategoryRepository categoryRepo,
     IUnitOfWorkManager unitOfWorkManager,
+    HybridCache hybridCache,
     ILogger<UpdateCategoryHandler> logger)
     : IRequestHandler<UpdateCategoryCommand, Result<CategoryDto>>
 {
@@ -33,6 +35,8 @@ public sealed class UpdateCategoryHandler(
         {
             category.Update(request.Name, request.Description);
             await unitOfWork.CommitAsync(ct);
+
+            await hybridCache.RemoveAsync(CacheKeys.CategoryById(category.Id.Value), ct);
 
             logger.LogInformation("Danh mục {CategoryId} đã được cập nhật - tên mới: '{Name}'",
                 category.Id.Value, category.Name);

@@ -10,6 +10,12 @@ namespace MinimalAPI.Infrastructure.Persistence.Repositories;
 public sealed class ProductRepository(AppDbContext db)
     : Repository<Product, ProductId>(db), IProductRepository
 {
+    /// <inheritdoc />
+    public override async Task<Product?> GetByIdAsync(ProductId id, CancellationToken ct = default) =>
+        await Set
+            .Include(p => p.Category)
+            .FirstOrDefaultAsync(p => p.Id == id, ct);
+
     public async Task<Product?> GetByCodeAsync(string Code, CancellationToken ct = default) =>
         await Set
             .Include(p => p.Category)

@@ -3,7 +3,10 @@ using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Products.DTOs;
 
 namespace MinimalAPI.Application.Features.Products.GetProductByCode;
-/// <summary> Truy vấn lấy sản phẩm theo mã. </summary>
+/// <summary>
+/// Lấy thông tin sản phẩm theo mã code
+/// </summary>
+/// <param name="Code"></param>
 public sealed record GetProductByCodeQuery(
-    /// <summary> Mã sản phẩm cần tìm. </summary>
+    /// <summary> Mã code sản phẩm. </summary>
     string Code) : IRequest<Result<ProductDto>>;

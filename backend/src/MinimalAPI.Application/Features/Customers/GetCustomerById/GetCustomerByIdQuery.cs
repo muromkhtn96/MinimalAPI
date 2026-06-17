@@ -8,4 +8,6 @@ namespace MinimalAPI.Application.Features.Customers.GetCustomer;
 /// </summary>
 /// <param name="Id"></param>
 /// <returns></returns>
-public sealed record GetCustomerByIdQuery(Guid Id) : IRequest<Result<CustomerDto>>;
+public sealed record GetCustomerByIdQuery(
+    /// <summary>Mã khách hàng.</summary>
+    Guid Id) : IRequest<Result<CustomerDto>>;

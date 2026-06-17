@@ -5,12 +5,14 @@ using MinimalAPI.Domain.Entities;
 using MinimalAPI.Domain.Interfaces;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace MinimalAPI.Application.Features.Customers.DeactivateCustomer;
 
 public sealed class DeactivateCustomerHandler(
     ICustomerRepository customerRepository,
     IUnitOfWorkManager unitOfWorkManager,
+    HybridCache hybridCache,
     ILogger<DeactivateCustomerHandler> logger)
     : IRequestHandler<DeactivateCustomerCommand, Result<CustomerDto>>
 {
@@ -40,6 +42,9 @@ public sealed class DeactivateCustomerHandler(
         {
             customer.Deactivate(); 
             await unitOfWork.CommitAsync(ct);
+
+            await hybridCache.RemoveAsync(CacheKeys.CustomerById(request.Id), ct);
+            await hybridCache.RemoveAsync(CacheKeys.CustomerByCode(customer.Code), ct);
 
             logger.LogInformation("Vô hiệu hóa khách hàng {Id} '{FullName}' thành công", customer.Id.Value, customer.FullName);
 

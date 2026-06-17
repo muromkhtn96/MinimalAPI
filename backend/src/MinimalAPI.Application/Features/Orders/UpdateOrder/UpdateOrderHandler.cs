@@ -6,13 +6,8 @@ using MinimalAPI.Domain.Entities;
 using MinimalAPI.Domain.Enums;
 using MinimalAPI.Domain.ValueObjects;
 using MinimalAPI.Domain.Interfaces;
-using Microsoft.Extensions.Caching.Distributed;
+// using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Hybrid;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace MinimalAPI.Application.Features.Orders.UpdateOrder;
 public sealed class UpdateOrderHandler(
@@ -22,7 +17,7 @@ public sealed class UpdateOrderHandler(
     IInventoryRepository inventoryRepo,
     ICustomerRepository customerRepo,
     IUnitOfWorkManager unitOfWorkManager,
-    // HybridCache hybridCache,
+    HybridCache hybridCache,
     ILogger<UpdateOrderHandler> logger)
     : IRequestHandler<UpdateOrderCommand, Result<OrderDto>>
 {
@@ -56,6 +51,9 @@ public sealed class UpdateOrderHandler(
 
             orderRepo.Update(order);
             await unitOfWork.CommitAsync(ct);
+
+            await hybridCache.RemoveAsync(CacheKeys.OrderById(order.Id.Value), ct);
+            await hybridCache.RemoveAsync(CacheKeys.OrderByCode(order.Code), ct);
 
             logger.LogInformation("Cập nhật đơn hàng {OrderId} thành công", order.Id.Value);
 

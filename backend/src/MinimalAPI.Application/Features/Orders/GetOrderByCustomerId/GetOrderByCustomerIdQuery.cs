@@ -9,4 +9,5 @@ namespace MinimalAPI.Application.Features.Orders.GetOrderByCustomerId;
 /// </summary>
 /// <param name="CustomerId">ID của khách hàng</param>
 /// <returns></returns>
-public sealed record GetOrderByCustomerIdQuery(Guid CustomerId) : IRequest<Result<List<OrderByCustomerDto>>>;
+public sealed record GetOrderByCustomerIdQuery(
+    Guid CustomerId) : IRequest<Result<List<OrderByCustomerDto>>>;

@@ -22,14 +22,16 @@ public sealed class GetOrderByIdHandler(
     /// <returns></returns>
     public async Task<Result<OrderDto>> Handle(GetOrderByIdQuery request, CancellationToken ct)
     {
-        string cacheKey = $"order:{request.id}";
+        var cacheKey = CacheKeys.OrderById(request.Id);
 
-        var orderDto = await hybridCache.GetOrCreateAsync<OrderDto?>(
+        var dto = await hybridCache.GetOrCreateAsync<OrderDto?>(
             cacheKey,
-            async token => 
+            async token =>
             {
-                var order = await orderRepository.GetByOrderIdAsync(new OrderId(request.id), token);
-                if (order is null)
+                var orderId = new OrderId(request.Id);
+                var order = await orderRepository.GetByOrderIdAsync(orderId, token);
+
+                if (order is null) 
                 {
                     return null;
                 }
@@ -46,8 +48,7 @@ public sealed class GetOrderByIdHandler(
                         product?.Name.Value ?? "Sản phẩm không xác định",
                         detail.Quantity,
                         detail.UnitPrice.Amount,
-                        detail.LineTotal.Amount
-                    ));
+                        detail.LineTotal.Amount));
                 }
 
                 return new OrderDto(
@@ -60,17 +61,16 @@ public sealed class GetOrderByIdHandler(
                     order.TotalAmount.Currency,
                     order.Note,
                     order.CreatedAt,
-                    detailDtos 
-                );
+                    detailDtos);
             },
-            cancellationToken: ct
-        );
-
-        if (orderDto is null)
+            cancellationToken: ct);
+        
+        if (dto is null)
         {
-            return Result<OrderDto>.Failure("Đơn hàng không tồn tại.");
+            return Result<OrderDto>.Failure("Không tìm thấy đơn hàng");
         }
 
-        return Result<OrderDto>.Success(orderDto);
+        return Result<OrderDto>.Success(dto);
+
     }
 }

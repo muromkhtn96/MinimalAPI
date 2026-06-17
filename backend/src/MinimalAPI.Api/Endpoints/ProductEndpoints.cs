@@ -51,10 +51,10 @@ public static class ProductEndpoints
         /// <returns></returns>
         group.MapGet("/{id:guid}", async Task<IResult> (Guid id, ISender sender) =>
         {
-            var result = await sender.Send(new GetProductQuery(id));
-            return result is not null
-                ? TypedResults.Ok(result)
-                : TypedResults.NotFound();
+            var result = await sender.Send(new GetProductByIdQuery(id));
+            return result.IsSuccess
+                ? TypedResults.Ok(result.Value)
+                : TypedResults.NotFound(new { error = result.Error });
         })
         .WithName("GetProduct")
         .WithSummary("Lấy chi tiết sản phẩm theo Id")

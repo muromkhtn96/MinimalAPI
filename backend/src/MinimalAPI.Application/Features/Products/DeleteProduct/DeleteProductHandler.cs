@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
 using MinimalAPI.Application.Features.Products.DTOs;
@@ -10,6 +11,7 @@ namespace MinimalAPI.Application.Features.Products.DeleteProduct;
 public sealed class DeleteProductHandler(
     IProductRepository productRepo,
     IUnitOfWorkManager unitOfWorkManager,
+    HybridCache hybridCache,
     ILogger<DeleteProductHandler> logger)
     : IRequestHandler<DeleteProductCommand, Result<ProductDto>>
 {
@@ -28,15 +30,19 @@ public sealed class DeleteProductHandler(
             return Result<ProductDto>.Failure("Sản phẩm không tồn tại.");
         }
 
+        var productCode = product.Code;
+
         await using var unitOfWork = await unitOfWorkManager.NewUnitOfWorkAsync(ct);
         try
         {
             productRepo.Remove(product);
             await unitOfWork.CommitAsync(ct);
 
-            logger.LogInformation("Đã xóa sản phẩm {ProductId} '{Name}' - trạng thái trước đó: {Status}",
-                product.Id.Value, product.Name.Value,
-                product.IsActive ? "đang hoạt động" : "không hoạt động");
+            await hybridCache.RemoveAsync(CacheKeys.ProductById(request.Id), ct);
+            await hybridCache.RemoveAsync(CacheKeys.ProductByCode(productCode), ct);
+
+            logger.LogInformation("Đã xóa sản phẩm {ProductId} '{Name}'",
+                product.Id.Value, product.Name.Value);
 
             return Result<ProductDto>.Success(new ProductDto(
                 product.Id.Value,
