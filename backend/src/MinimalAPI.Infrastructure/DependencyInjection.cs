@@ -3,7 +3,9 @@ using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MinimalAPI.Application.Abstractions;
+using MinimalAPI.Application.Abstractions.Messaging;
 using MinimalAPI.Domain.Interfaces;
+using MinimalAPI.Infrastructure.Messaging.Kafka;
 using MinimalAPI.Infrastructure.Persistence;
 using MinimalAPI.Infrastructure.Persistence.Repositories;
 using MinimalAPI.Infrastructure.Services;
@@ -54,6 +56,16 @@ public static class DependencyInjection
         services.AddScoped<IOrderDetailRepository, OrderDetailRepository>();
         // services.AddTransient
         services.AddScoped<ICodeGenerator, CodeGenerator>();
+
+        // Kafka — lifetime CHUẨN cho từng thành phần:
+        //   - KafkaTopicResolver: Singleton — mapping event↔topic bất biến, build 1 lần, validate fail-fast
+        //   - Producer: Singleton — IProducer thread-safe, giữ TCP connection, khởi tạo tốn kém
+        //   - Consumer: AddHostedService — framework giữ đúng 1 instance chạy nền suốt vòng đời app
+        //   - Handler (IIntegrationEventHandler<T>): Scoped, đăng ký ở Application/DependencyInjection.cs
+        services.Configure<KafkaOptions>(configuration.GetSection(KafkaOptions.SectionName));
+        services.AddSingleton<KafkaTopicResolver>();
+        services.AddSingleton<IIntegrationEventPublisher, KafkaProducerService>();
+        services.AddHostedService<KafkaConsumerService>();
 
         return services;
     }

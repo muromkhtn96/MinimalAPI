@@ -6,7 +6,7 @@ Hệ thống quản lý sản phẩm (Product Management) full-stack xây dựng
 
 ## ⚡ TL;DR - ONE COMMAND START
 
-**Chỉ cần 1 lệnh để chạy TẤT CẢ (DB + API + Frontend + Seq + pgAdmin):**
+**Chỉ cần 1 lệnh để chạy TẤT CẢ (DB + Redis + Kafka + Kafka UI + API + Frontend + Seq + pgAdmin):**
 
 ```bash
 docker compose -f docker-compose.dev.yml up --build -d
@@ -17,6 +17,7 @@ docker compose -f docker-compose.dev.yml up --build -d
 - 📖 **Swagger**: http://localhost:5000/swagger
 - 📊 **Seq Logs**: http://localhost:8081
 - 🗄️ **pgAdmin**: http://localhost:5050
+- 📨 **Kafka UI**: http://localhost:8085
 
 **Stop tất cả:**
 ```bash
@@ -119,10 +120,10 @@ MinimalAPI/
 
 ### Option 1: Full Docker Stack (Recommended) ⭐
 
-**Chỉ cần 1 lệnh để chạy TẤT CẢ 5 services:**
+**Chỉ cần 1 lệnh để chạy TẤT CẢ 8 services:**
 
 ```bash
-# Build và start: DB + Seq + API + Frontend + pgAdmin
+# Build và start: DB + Redis + Kafka + Kafka UI + Seq + API + Frontend + pgAdmin
 docker compose -f docker-compose.dev.yml up --build -d
 ```
 
@@ -130,10 +131,12 @@ docker compose -f docker-compose.dev.yml up --build -d
 1. ✅ Build Backend (.NET 10) từ source code
 2. ✅ Build Frontend (Angular 19) từ source code
 3. ✅ Start PostgreSQL database
-4. ✅ Start Seq logging server
-5. ✅ Start pgAdmin web UI
-6. ✅ Run database migrations
-7. ✅ Seed sample data (3 categories + 5 products)
+4. ✅ Start Redis (HybridCache L2)
+5. ✅ Start Kafka broker (KRaft) + Kafka UI
+6. ✅ Start Seq logging server
+7. ✅ Start pgAdmin web UI
+8. ✅ Run database migrations
+9. ✅ Seed sample data (3 categories + 5 products + 2 customers)
 
 **Quản lý containers:**
 
@@ -160,7 +163,10 @@ docker compose -f docker-compose.dev.yml down -v
 | 📖 **Swagger** | Api | http://localhost:5000/swagger | API Documentation |
 | 📊 **Seq** | SeqLog | http://localhost:8081 | Structured Logs Dashboard |
 | 🗄️ **pgAdmin** | PgAdmin | http://localhost:5050 | PostgreSQL Web UI |
-| 💾 **PostgreSQL** | PostgresDB | localhost:5432 | Database (TCP only) |
+| 📨 **Kafka UI** | KafkaUI | http://localhost:8085 | Xem topic, message, consumer group |
+| 📬 **Kafka** | Kafka | localhost:9092 | Message broker (TCP only — không phải web) |
+| ⚡ **Redis** | RedisCache | localhost:6379 | Cache L2 (TCP only) |
+| 💾 **PostgreSQL** | PostgresDB | localhost:5433 | Database (TCP only, host port 5433 → container 5432) |
 
 **Seed Data (Development):**
 - ✅ 3 Categories: Điện tử, Thời trang, Sách
@@ -177,13 +183,13 @@ docker compose -f docker-compose.dev.yml down -v
 - Username: `postgres`
 - Password: `postgres123`
 
-### Option 2: Hybrid (DB + Seq in Docker, API + FE local)
+### Option 2: Hybrid (hạ tầng in Docker, API + FE local)
 
 Tốt cho debugging và hot-reload nhanh:
 
 ```bash
-# 1. Start infrastructure services
-docker compose -f docker-compose.dev.yml up db seq -d
+# 1. Start infrastructure services (DB + Redis + Kafka + Kafka UI + Seq)
+docker compose -f docker-compose.dev.yml up db redis kafka kafka-ui seq -d
 
 # 2. Terminal 1: Run backend
 dotnet run --project backend/src/MinimalAPI.Api
@@ -199,6 +205,7 @@ ng serve
 - API: http://localhost:5000
 - Swagger: http://localhost:5000/swagger
 - Seq: http://localhost:8081
+- Kafka UI: http://localhost:8085
 
 ## 📝 Common Docker Commands
 

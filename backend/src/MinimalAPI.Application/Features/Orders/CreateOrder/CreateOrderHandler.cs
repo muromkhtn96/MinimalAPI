@@ -3,7 +3,9 @@ using MediatR;
 // using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
+using MinimalAPI.Application.Abstractions.Messaging;
 using MinimalAPI.Application.Features.Orders.DTOs;
+using MinimalAPI.Application.IntegrationEvents.Orders;
 using MinimalAPI.Domain.Entities;
 using MinimalAPI.Domain.Enums;
 using MinimalAPI.Domain.Interfaces;
@@ -20,6 +22,7 @@ public sealed class CreateOrderHandler(
     IUnitOfWorkManager unitOfWorkManager,
     // HybridCache hybridCache,
     ICodeGenerator codeGenerator,
+    IIntegrationEventPublisher eventPublisher,
     ILogger<CreateOrderHandler> logger)
     : IRequestHandler<CreateOrderCommand, Result<OrderDto>>
 {
@@ -48,29 +51,28 @@ public sealed class CreateOrderHandler(
 
         var code = await codeGenerator.NextAsync("DH", 5, ct);
 
+        var order = new Order(orderId)
+        {
+            Code = code,
+            CustomerId = customer.Id,
+            Status = OrderStatus.Pending,
+            Note = request.Note?.Trim(),
+            CreatedAt = DateTime.UtcNow,
+            Details = preparedData.Details,
+            TotalAmount = preparedData.Details.Aggregate(Money.Zero, (sum, detail) => sum + detail.LineTotal)
+        };
+        order.AddCreatedEvent();
+
         await using var unitOfWork = await unitOfWorkManager.NewUnitOfWorkAsync(ct);
         try
         {
-            var order = new Order(orderId)
-            {
-                Code = code,
-                CustomerId = customer.Id,
-                Status = OrderStatus.Pending,
-                Note = request.Note?.Trim(),
-                CreatedAt = DateTime.UtcNow,
-                Details = preparedData.Details,
-                TotalAmount = preparedData.Details.Aggregate(Money.Zero, (sum, detail) => sum + detail.LineTotal)
-            };
-            order.AddCreatedEvent();
             orderRepo.Add(order);
             orderDetailRepo.AddRange(preparedData.Details);
 
             // await hybridCache.RemoveAsync($"order:{order.Id.Value}", ct);
             // await hybridCache.RemoveAsync($"order:code:{order.Code}", ct);
-            
+
             await unitOfWork.CommitAsync(ct);
-            logger.LogInformation("Tạo đơn hàng {OrderId} thành công", order.Id.Value);
-            return Result<OrderDto>.Success(MapToDto(order, preparedData.Details, preparedData.Products, customer.FullName));
         }
         catch (Exception ex)
         {
@@ -78,7 +80,25 @@ public sealed class CreateOrderHandler(
             await unitOfWork.RollbackAsync(ct);
             throw;
         }
+
+        // SAU COMMIT: dữ liệu đã lưu chắc chắn — các bước dưới đây không được rollback,
+        // không được ném lỗi làm fail request, và không phụ thuộc CancellationToken của request nữa
+        logger.LogInformation("Tạo đơn hàng {OrderId} thành công", order.Id.Value);
+
+        await eventPublisher.PublishAfterCommitAsync(new OrderCreatedIntegrationEvent
+        {
+            OrderId = order.Id.Value,
+            Code = order.Code,
+            CustomerId = order.CustomerId.Value,
+            TotalAmount = order.TotalAmount.Amount,
+            Currency = order.TotalAmount.Currency,
+            CreatedAt = order.CreatedAt,
+            Items = OrderEventItemMapper.ToEventItems(preparedData.Details, preparedData.Products)
+        }, logger);
+
+        return Result<OrderDto>.Success(MapToDto(order, preparedData.Details, preparedData.Products, customer.FullName));
     }
+
     private async Task<Result<Customer>> GetAndValidateCustomerAsync(Guid customerId, CancellationToken ct)
     {
         var customer = await customerRepo.GetByIdAsync(new CustomerId(customerId), ct);
