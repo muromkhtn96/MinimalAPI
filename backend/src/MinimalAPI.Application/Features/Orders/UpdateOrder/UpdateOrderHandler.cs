@@ -3,7 +3,9 @@ using MediatR;
 // using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using MinimalAPI.Application.Abstractions;
+using MinimalAPI.Application.Abstractions.Messaging;
 using MinimalAPI.Application.Features.Orders.DTOs;
+using MinimalAPI.Application.IntegrationEvents.Orders;
 using MinimalAPI.Domain.Entities;
 using MinimalAPI.Domain.Enums;
 using MinimalAPI.Domain.ValueObjects;
@@ -18,6 +20,7 @@ public sealed class UpdateOrderHandler(
     ICustomerRepository customerRepo,
     IUnitOfWorkManager unitOfWorkManager,
     ICacheService cacheService,
+    IIntegrationEventPublisher eventPublisher,
     ILogger<UpdateOrderHandler> logger)
     : IRequestHandler<UpdateOrderCommand, Result<OrderDto>>
 {
@@ -56,14 +59,6 @@ public sealed class UpdateOrderHandler(
 
             orderRepo.Update(order);
             await unitOfWork.CommitAsync(ct);
-
-            await cacheService.RemoveAsync(CacheKeys.OrderById(order.Id.Value), ct);
-            await cacheService.RemoveAsync(CacheKeys.OrderByCode(order.Code), ct);
-
-
-            logger.LogInformation("Cập nhật đơn hàng {OrderId} thành công", order.Id.Value);
-
-            return Result<OrderDto>.Success(MapToDto(order, preparedData.NewDetails, preparedData.Products, customerName));
         }
         catch (Exception ex)
         {
@@ -71,6 +66,36 @@ public sealed class UpdateOrderHandler(
             await unitOfWork.RollbackAsync(ct);
             throw;
         }
+
+        // SAU COMMIT: dữ liệu đã lưu chắc chắn — các bước dưới đây không được rollback,
+        // không được ném lỗi làm fail request, và không phụ thuộc CancellationToken của request nữa.
+        // (Trước đây cache lỗi sau commit → rollback trên transaction ĐÃ commit + trả 500 sai)
+        logger.LogInformation("Cập nhật đơn hàng {OrderId} thành công", order.Id.Value);
+
+        try
+        {
+            await cacheService.RemoveAsync(CacheKeys.OrderById(order.Id.Value), CancellationToken.None);
+            await cacheService.RemoveAsync(CacheKeys.OrderByCode(order.Code), CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex,
+                "Xóa cache đơn hàng {OrderId} thất bại — dữ liệu cache có thể cũ tối đa hết TTL",
+                order.Id.Value);
+        }
+
+        await eventPublisher.PublishAfterCommitAsync(new OrderUpdatedIntegrationEvent
+        {
+            OrderId = order.Id.Value,
+            Code = order.Code,
+            CustomerId = order.CustomerId.Value,
+            TotalAmount = order.TotalAmount.Amount,
+            Currency = order.TotalAmount.Currency,
+            UpdatedAt = order.UpdatedAt ?? DateTime.UtcNow,
+            Items = OrderEventItemMapper.ToEventItems(preparedData.NewDetails, preparedData.Products)
+        }, logger);
+
+        return Result<OrderDto>.Success(MapToDto(order, preparedData.NewDetails, preparedData.Products, customerName));
     }
 
     private async Task<Result<Order>> GetAndValidateOrderForUpdateAsync(Guid orderId, CancellationToken ct)

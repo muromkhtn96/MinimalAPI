@@ -79,7 +79,7 @@ public static class SeedData
             CustomerType.Individual,
             null,
             Gender.Male,
-            new DateTime(1990, 1, 1),
+            new DateTime(1990, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             "123 Đường Lê Lợi, TP. HCM",
             "Khách hàng VIP"
         );
@@ -91,7 +91,7 @@ public static class SeedData
             CustomerType.Individual,
             null,
             Gender.Female,
-            new DateTime(1995, 5, 5),
+            new DateTime(1995, 5, 5, 0, 0, 0, DateTimeKind.Utc),
             "456 Đường Nguyễn Huệ, TP. HCM",
             null
         );
